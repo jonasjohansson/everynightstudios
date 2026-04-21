@@ -17,7 +17,7 @@ export function loadImage(src) {
   return p;
 }
 
-export async function renderCard(canvas, { cap, threadHex, text, logoImage }) {
+export async function renderCard(canvas, { cap, threadHex, text, logoImage, fontScale = 1 }) {
   const capImg = await loadImage(cap.image);
   canvas.width = capImg.naturalWidth;
   canvas.height = capImg.naturalHeight;
@@ -28,15 +28,16 @@ export async function renderCard(canvas, { cap, threadHex, text, logoImage }) {
   const { cx, cy, boxW } = resolveAnchor(cap.anchor, canvas.width, canvas.height);
 
   if (logoImage) {
-    await drawLogo(ctx, logoImage, cx, cy, boxW, threadHex);
+    await drawLogo(ctx, logoImage, cx, cy, boxW * fontScale, threadHex);
   } else if (text) {
-    drawText(ctx, text, cx, cy, boxW, threadHex);
+    drawText(ctx, text, cx, cy, boxW, threadHex, fontScale);
   }
 }
 
-function drawText(ctx, text, cx, cy, boxW, color) {
+function drawText(ctx, text, cx, cy, boxW, color, scale) {
   const family = '"Georgia", serif';
-  const size = fitFontSize(ctx, text, family, 200, boxW, { max: 220 });
+  const fit = fitFontSize(ctx, text, family, 200, boxW, { max: 220 });
+  const size = Math.max(6, Math.round(fit * scale));
   ctx.font = `${size}px ${family}`;
   ctx.fillStyle = color;
   ctx.textAlign = 'center';

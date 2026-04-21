@@ -23,12 +23,8 @@ export function createCard(caps, threads, getMaster) {
   el.innerHTML = `
     <canvas></canvas>
     <div class="controls">
-      <label>cap
-        <select class="cap-select"></select>
-      </label>
-      <label>thread
-        <select class="thread-select"></select>
-      </label>
+      <select class="cap-select" title="cap"></select>
+      <select class="thread-select" title="thread"></select>
       <button class="remove" title="remove">×</button>
     </div>
   `;
@@ -62,7 +58,21 @@ export function createCard(caps, threads, getMaster) {
       threadHex: state.threadHex,
       text: master.text,
       logoImage: master.logoImage,
+      fontScale: master.fontScale ?? 1,
     });
+  }
+
+  function setCap(cap) {
+    state.cap = cap;
+    capSel.value = cap.id;
+    paintSelects();
+    redraw();
+  }
+  function setThread(hex) {
+    state.threadHex = hex;
+    threadSel.value = hex;
+    paintSelects();
+    redraw();
   }
 
   function paintSelects() {
@@ -88,7 +98,7 @@ export function createCard(caps, threads, getMaster) {
     cards.delete(state.id);
   });
 
-  cards.set(state.id, { state, redraw, el });
+  cards.set(state.id, { state, redraw, el, setCap, setThread });
   paintSelects();
   redraw();
 
