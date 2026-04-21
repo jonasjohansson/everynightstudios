@@ -20,9 +20,11 @@ test('buildSpecs emits one entry per card with looked-up thread name', () => {
     threadName: 'Bright White',
     text: 'every night',
     logoFilename: 'logo.svg',
+    embroideryWidthCm: 16,
   });
   assert.equal(specs[1].index, 2);
   assert.equal(specs[1].capId, 'vintage-black');
+  assert.equal(specs[1].embroideryWidthCm, 16);
 });
 
 test('buildSpecs falls back to null threadName for unknown hex and null logo when absent', () => {
@@ -31,4 +33,11 @@ test('buildSpecs falls back to null threadName for unknown hex and null logo whe
   assert.equal(specs[0].threadName, null);
   assert.equal(specs[0].threadHex, '#abcdef');
   assert.equal(specs[0].logoFilename, null);
+  assert.equal(specs[0].embroideryWidthCm, 16);
+});
+
+test('buildSpecs scales embroideryWidthCm by master.fontScale', () => {
+  const cards = [{ state: { cap: { id: 'a', name: 'A' }, threadHex: '#000' } }];
+  const specs = buildSpecs(cards, { text: 'x', logoFilename: null, fontScale: 0.5 }, {});
+  assert.equal(specs[0].embroideryWidthCm, 8);
 });

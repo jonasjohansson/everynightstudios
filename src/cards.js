@@ -59,6 +59,7 @@ export function createCard(caps, threads, getMaster) {
       text: master.text,
       logoImage: master.logoImage,
       fontScale: master.fontScale ?? 1,
+      yOffset: master.yOffset ?? 0,
     });
   }
 

@@ -1,4 +1,7 @@
+export const CAP_FRONT_CM = 16;
+
 export function buildSpecs(cards, master, threadLookup) {
+  const widthCm = Math.round(CAP_FRONT_CM * (master.fontScale ?? 1) * 10) / 10;
   return cards.map((c, i) => {
     const { cap, threadHex } = c.state;
     return {
@@ -9,6 +12,7 @@ export function buildSpecs(cards, master, threadLookup) {
       threadName: threadLookup[threadHex] ?? null,
       text: master.text,
       logoFilename: master.logoFilename ?? null,
+      embroideryWidthCm: widthCm,
     };
   });
 }

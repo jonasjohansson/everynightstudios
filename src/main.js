@@ -12,6 +12,7 @@ const master = {
   logoFilename: null,
   logoFile: null,
   fontScale: 1.0,
+  yOffset: 0,
 };
 const getMaster = () => master;
 
@@ -32,6 +33,11 @@ bar.innerHTML = `
   <label class="range-label">
     size
     <input class="font-scale" type="range" min="0.3" max="2" step="0.05" value="1">
+    <span class="size-readout">16.0 cm</span>
+  </label>
+  <label class="range-label">
+    y
+    <input class="y-offset" type="range" min="-0.3" max="0.3" step="0.005" value="0">
   </label>
   <button class="randomize">randomize</button>
   <button class="export">export zip</button>
@@ -71,8 +77,20 @@ countInput.addEventListener('input', () => {
   fitGrid();
 });
 
+const sizeReadout = bar.querySelector('.size-readout');
+const CAP_FRONT_CM = 16;
+function updateSizeReadout() {
+  sizeReadout.textContent = `${(master.fontScale * CAP_FRONT_CM).toFixed(1)} cm`;
+}
 bar.querySelector('.font-scale').addEventListener('input', (e) => {
   master.fontScale = parseFloat(e.target.value);
+  updateSizeReadout();
+  redrawAll();
+});
+updateSizeReadout();
+
+bar.querySelector('.y-offset').addEventListener('input', (e) => {
+  master.yOffset = parseFloat(e.target.value);
   redrawAll();
 });
 

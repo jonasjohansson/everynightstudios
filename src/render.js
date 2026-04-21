@@ -17,7 +17,7 @@ export function loadImage(src) {
   return p;
 }
 
-export async function renderCard(canvas, { cap, threadHex, text, logoImage, fontScale = 1 }) {
+export async function renderCard(canvas, { cap, threadHex, text, logoImage, fontScale = 1, yOffset = 0 }) {
   const capImg = await loadImage(cap.image);
   canvas.width = capImg.naturalWidth;
   canvas.height = capImg.naturalHeight;
@@ -26,11 +26,12 @@ export async function renderCard(canvas, { cap, threadHex, text, logoImage, font
   ctx.drawImage(capImg, 0, 0);
 
   const { cx, cy, boxW } = resolveAnchor(cap.anchor, canvas.width, canvas.height);
+  const y = cy + Math.round(yOffset * canvas.height);
 
   if (logoImage) {
-    await drawLogo(ctx, logoImage, cx, cy, boxW * fontScale, threadHex);
+    await drawLogo(ctx, logoImage, cx, y, boxW * fontScale, threadHex);
   } else if (text) {
-    drawText(ctx, text, cx, cy, boxW, threadHex, fontScale);
+    drawText(ctx, text, cx, y, boxW, threadHex, fontScale);
   }
 }
 

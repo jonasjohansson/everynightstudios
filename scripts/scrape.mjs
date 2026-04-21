@@ -36,7 +36,7 @@ const caps = files.map(f => {
     name: titleCase(id),
     hex: null,
     image: `${CAPS_DIR}/${f}`,
-    anchor: { x: 0.5, y: 0.55, width: 0.35 },
+    anchor: { x: 0.5, y: 0.47, width: 0.35 },
   };
 });
 
