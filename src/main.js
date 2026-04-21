@@ -16,7 +16,7 @@ const master = {
 };
 const getMaster = () => master;
 
-const grid = document.getElementById('card-grid');
+const grid = document.getElementById('cap-grid');
 const bar = document.getElementById('master-bar');
 
 bar.innerHTML = `
@@ -27,7 +27,7 @@ bar.innerHTML = `
   </label>
   <button class="logo-clear" hidden>clear logo</button>
   <label class="num-label">
-    cards
+    caps
     <input class="count" type="number" min="1" max="40" value="4">
   </label>
   <label class="range-label">

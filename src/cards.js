@@ -19,7 +19,7 @@ export function createCard(caps, threads, getMaster) {
   };
 
   const el = document.createElement('article');
-  el.className = 'card';
+  el.className = 'cap';
   el.innerHTML = `
     <canvas></canvas>
     <div class="controls">
