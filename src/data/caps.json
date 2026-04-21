@@ -2,7 +2,7 @@
   {
     "id": "vintage-black",
     "name": "Vintage Black",
-    "hex": "#3d4140",
+    "hex": "#383c3b",
     "image": "public/caps/vintage-black.png",
     "anchor": {
       "x": 0.5,
@@ -13,7 +13,7 @@
   {
     "id": "vintage-bottle-green",
     "name": "Vintage Bottle Green",
-    "hex": "#3c5446",
+    "hex": "#395142",
     "image": "public/caps/vintage-bottle-green.png",
     "anchor": {
       "x": 0.5,
@@ -24,7 +24,7 @@
   {
     "id": "vintage-brown",
     "name": "Vintage Brown",
-    "hex": "#534a40",
+    "hex": "#50463c",
     "image": "public/caps/vintage-brown.png",
     "anchor": {
       "x": 0.5,
@@ -35,7 +35,7 @@
   {
     "id": "vintage-cornflower",
     "name": "Vintage Cornflower",
-    "hex": "#768eca",
+    "hex": "#738bc8",
     "image": "public/caps/vintage-cornflower.png",
     "anchor": {
       "x": 0.5,
@@ -46,7 +46,7 @@
   {
     "id": "vintage-denim",
     "name": "Vintage Denim",
-    "hex": "#4c5362",
+    "hex": "#484f5e",
     "image": "public/caps/vintage-denim.png",
     "anchor": {
       "x": 0.5,
@@ -57,7 +57,7 @@
   {
     "id": "vintage-dusky-pink",
     "name": "Vintage Dusky Pink",
-    "hex": "#d5adae",
+    "hex": "#d0a8a8",
     "image": "public/caps/vintage-dusky-pink.png",
     "anchor": {
       "x": 0.5,
@@ -68,7 +68,7 @@
   {
     "id": "vintage-grey",
     "name": "Vintage Grey",
-    "hex": "#949590",
+    "hex": "#8f8f8a",
     "image": "public/caps/vintage-grey.png",
     "anchor": {
       "x": 0.5,
@@ -79,7 +79,7 @@
   {
     "id": "vintage-jungle-camo",
     "name": "Vintage Jungle Camo",
-    "hex": "#37392f",
+    "hex": "#31332a",
     "image": "public/caps/vintage-jungle-camo.png",
     "anchor": {
       "x": 0.5,
@@ -90,7 +90,7 @@
   {
     "id": "vintage-light-denim",
     "name": "Vintage Light Denim",
-    "hex": "#7c959b",
+    "hex": "#768e95",
     "image": "public/caps/vintage-light-denim.png",
     "anchor": {
       "x": 0.5,
@@ -101,7 +101,7 @@
   {
     "id": "vintage-mustard",
     "name": "Vintage Mustard",
-    "hex": "#c5944f",
+    "hex": "#be8c4a",
     "image": "public/caps/vintage-mustard.png",
     "anchor": {
       "x": 0.5,
@@ -112,7 +112,7 @@
   {
     "id": "vintage-olive",
     "name": "Vintage Olive",
-    "hex": "#666759",
+    "hex": "#626354",
     "image": "public/caps/vintage-olive.png",
     "anchor": {
       "x": 0.5,
@@ -123,7 +123,7 @@
   {
     "id": "vintage-orange",
     "name": "Vintage Orange",
-    "hex": "#b36853",
+    "hex": "#ae624e",
     "image": "public/caps/vintage-orange.png",
     "anchor": {
       "x": 0.5,
@@ -145,7 +145,7 @@
   {
     "id": "vintage-sage-green",
     "name": "Vintage Sage Green",
-    "hex": "#829389",
+    "hex": "#7e8e84",
     "image": "public/caps/vintage-sage-green.png",
     "anchor": {
       "x": 0.5,
@@ -156,7 +156,7 @@
   {
     "id": "vintage-sand",
     "name": "Vintage Sand",
-    "hex": "#b7b19a",
+    "hex": "#b3ad95",
     "image": "public/caps/vintage-sand.png",
     "anchor": {
       "x": 0.5,
