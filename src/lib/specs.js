@@ -1,6 +1,6 @@
-// Calibrated so that a slider value of ~1.9 renders text at ~20cm —
-// the physical width of the cap's front panel / rim.
-export const CAP_FRONT_CM = 10.5;
+// Calibrated from measured references: readout 10cm ≈ physical 8cm;
+// readout 20cm ≈ physical 16cm (= the cap front panel width).
+export const CAP_FRONT_CM = 8.4;
 
 export function buildSpecs(cards, master, threadLookup) {
   const widthCm = Math.round(CAP_FRONT_CM * (master.fontScale ?? 1) * 10) / 10;
