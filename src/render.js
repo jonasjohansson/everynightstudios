@@ -17,6 +17,28 @@ export function loadImage(src) {
   return p;
 }
 
+function getBgRgb() {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    const m = v.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (m) return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+  } catch {}
+  return [199, 199, 199];
+}
+
+// Replace near-white pixels (the cap photo's outer margin) with the page
+// bg color so exported PNGs blend with the page and tile seamlessly.
+function flattenWhite(ctx, w, h, [r, g, b]) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] >= 245 && d[i + 1] >= 245 && d[i + 2] >= 245) {
+      d[i] = r; d[i + 1] = g; d[i + 2] = b;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 export async function renderCard(canvas, { cap, threadHex, text, logoImage, fontScale = 1, yOffset = 0 }) {
   const capImg = await loadImage(cap.image);
   canvas.width = capImg.naturalWidth;
@@ -24,6 +46,7 @@ export async function renderCard(canvas, { cap, threadHex, text, logoImage, font
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(capImg, 0, 0);
+  flattenWhite(ctx, canvas.width, canvas.height, getBgRgb());
 
   const { cx, cy, boxW } = resolveAnchor(cap.anchor, canvas.width, canvas.height);
   const y = cy + Math.round(yOffset * canvas.height);
