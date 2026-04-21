@@ -151,3 +151,21 @@ window.addEventListener('resize', fitGrid);
 
 setCardCount(4);
 fitGrid();
+
+// Load the default logo.
+(async () => {
+  try {
+    const res = await fetch('public/default-logo.svg');
+    if (!res.ok) return;
+    const text = await res.text();
+    const blob = new Blob([text], { type: 'image/svg+xml' });
+    const file = new File([blob], 'default-logo.svg', { type: 'image/svg+xml' });
+    master.logoImage = await readLogoFile(file);
+    master.logoFilename = file.name;
+    master.logoFile = file;
+    logoClear.hidden = false;
+    redrawAll();
+  } catch (e) {
+    console.warn('default logo load failed:', e);
+  }
+})();
