@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSpecs } from './specs.js';
+import { buildSpecs, CAP_FRONT_CM } from './specs.js';
 
 test('buildSpecs emits one entry per card with looked-up thread name', () => {
   const cards = [
@@ -20,11 +20,11 @@ test('buildSpecs emits one entry per card with looked-up thread name', () => {
     threadName: 'Bright White',
     text: 'every night',
     logoFilename: 'logo.svg',
-    embroideryWidthCm: 16,
+    embroideryWidthCm: Math.round(CAP_FRONT_CM * 10) / 10,
   });
   assert.equal(specs[1].index, 2);
   assert.equal(specs[1].capId, 'vintage-black');
-  assert.equal(specs[1].embroideryWidthCm, 16);
+  assert.equal(specs[1].embroideryWidthCm, Math.round(CAP_FRONT_CM * 10) / 10);
 });
 
 test('buildSpecs falls back to null threadName for unknown hex and null logo when absent', () => {
@@ -33,11 +33,11 @@ test('buildSpecs falls back to null threadName for unknown hex and null logo whe
   assert.equal(specs[0].threadName, null);
   assert.equal(specs[0].threadHex, '#abcdef');
   assert.equal(specs[0].logoFilename, null);
-  assert.equal(specs[0].embroideryWidthCm, 16);
+  assert.equal(specs[0].embroideryWidthCm, Math.round(CAP_FRONT_CM * 10) / 10);
 });
 
 test('buildSpecs scales embroideryWidthCm by master.fontScale', () => {
   const cards = [{ state: { cap: { id: 'a', name: 'A' }, threadHex: '#000' } }];
   const specs = buildSpecs(cards, { text: 'x', logoFilename: null, fontScale: 0.5 }, {});
-  assert.equal(specs[0].embroideryWidthCm, 8);
+  assert.equal(specs[0].embroideryWidthCm, Math.round(CAP_FRONT_CM * 0.5 * 10) / 10);
 });

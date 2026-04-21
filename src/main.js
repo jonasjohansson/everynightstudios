@@ -2,9 +2,11 @@ import caps from './data/caps.json' with { type: 'json' };
 import threads from './data/threads.json' with { type: 'json' };
 import { createCard, cards, redrawAll } from './cards.js';
 import { readLogoFile } from './lib/logo.js';
-import { exportZip } from './export.js';
+import { exportZip, exportCard } from './export.js';
+import { CAP_FRONT_CM } from './lib/specs.js';
 
 const CAP_ASPECT = 688 / 885;
+const DEFAULT_COUNT = 6;
 
 const master = {
   text: 'every night',
@@ -28,12 +30,12 @@ bar.innerHTML = `
   <button class="logo-clear" hidden>clear logo</button>
   <label class="num-label">
     caps
-    <input class="count" type="number" min="1" max="40" value="4">
+    <input class="count" type="number" min="1" max="40" value="${DEFAULT_COUNT}">
   </label>
   <label class="range-label">
     size
     <input class="font-scale" type="range" min="0.3" max="2" step="0.05" value="1">
-    <span class="size-readout">16.0 cm</span>
+    <span class="size-readout"></span>
   </label>
   <label class="range-label">
     y
@@ -42,6 +44,11 @@ bar.innerHTML = `
   <button class="randomize">randomize</button>
   <button class="export">export zip</button>
 `;
+
+function handleCardExport(entry) {
+  const index = Array.from(cards.values()).indexOf(entry) + 1;
+  exportCard(entry, index, threads, master);
+}
 
 bar.querySelector('.text-input').addEventListener('input', (e) => {
   master.text = e.target.value;
@@ -78,7 +85,6 @@ countInput.addEventListener('input', () => {
 });
 
 const sizeReadout = bar.querySelector('.size-readout');
-const CAP_FRONT_CM = 16;
 function updateSizeReadout() {
   sizeReadout.textContent = `${(master.fontScale * CAP_FRONT_CM).toFixed(1)} cm`;
 }
@@ -97,6 +103,7 @@ bar.querySelector('.y-offset').addEventListener('input', (e) => {
 bar.querySelector('.randomize').addEventListener('click', () => {
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   for (const c of cards.values()) {
+    if (c.state.locked) continue;
     c.setCap(pick(caps));
     c.setThread(pick(threads).hex);
   }
@@ -111,11 +118,10 @@ function setCardCount(target) {
   if (target > current) {
     for (let i = current; i < target; i++) {
       const cap = caps[i % caps.length];
-      const cardEl = createCard(caps, threads, getMaster);
-      const sel = cardEl.querySelector('.cap-select');
-      sel.value = cap.id;
-      sel.dispatchEvent(new Event('change'));
+      const cardEl = createCard(caps, threads, getMaster, handleCardExport);
       grid.appendChild(cardEl);
+      const entry = Array.from(cards.values()).pop();
+      entry.setCap(cap);
     }
   } else if (target < current) {
     const toRemove = Array.from(cards.entries()).slice(target);
@@ -149,7 +155,7 @@ function fitGrid() {
 
 window.addEventListener('resize', fitGrid);
 
-setCardCount(4);
+setCardCount(DEFAULT_COUNT);
 fitGrid();
 
 // Load the default logo.

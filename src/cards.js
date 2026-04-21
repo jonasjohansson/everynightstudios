@@ -4,52 +4,56 @@ import { renderCard } from './render.js';
 let nextId = 1;
 export const cards = new Map();
 
-function contrastOn(hex) {
-  if (!hex) return '#000';
-  const n = parseInt(hex.slice(1), 16);
-  const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
-  return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#000' : '#fff';
-}
-
-export function createCard(caps, threads, getMaster) {
+export function createCard(caps, threads, getMaster, onExport) {
   const state = {
     id: nextId++,
     cap: caps[0],
     threadHex: threads[0].hex,
+    locked: false,
   };
 
   const el = document.createElement('article');
   el.className = 'cap';
   el.innerHTML = `
     <canvas></canvas>
+    <button class="lock" title="keep during randomize">🔓</button>
     <div class="controls">
-      <select class="cap-select" title="cap"></select>
-      <select class="thread-select" title="thread"></select>
-      <button class="remove" title="remove">×</button>
+      <div class="swatches cap-swatches"></div>
+      <div class="swatches thread-swatches"></div>
+      <div class="actions">
+        <button class="save" title="save PNG">⬇</button>
+        <button class="remove" title="remove">×</button>
+      </div>
     </div>
   `;
 
   const canvas = el.querySelector('canvas');
-  const capSel = el.querySelector('.cap-select');
-  const threadSel = el.querySelector('.thread-select');
+  const capRow = el.querySelector('.cap-swatches');
+  const threadRow = el.querySelector('.thread-swatches');
   const removeBtn = el.querySelector('.remove');
+  const saveBtn = el.querySelector('.save');
+  const lockBtn = el.querySelector('.lock');
 
-  for (const c of caps) {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.name;
-    opt.style.backgroundColor = c.hex || '#fff';
-    opt.style.color = contrastOn(c.hex);
-    capSel.appendChild(opt);
-  }
-  for (const t of threads) {
-    const opt = document.createElement('option');
-    opt.value = t.hex;
-    opt.textContent = t.name;
-    opt.style.backgroundColor = t.hex;
-    opt.style.color = contrastOn(t.hex);
-    threadSel.appendChild(opt);
-  }
+  const capBtns = caps.map(c => {
+    const b = document.createElement('button');
+    b.className = 'swatch';
+    b.style.background = c.hex || '#fff';
+    b.title = c.name;
+    b.dataset.id = c.id;
+    b.addEventListener('click', () => setCap(c));
+    capRow.appendChild(b);
+    return b;
+  });
+  const threadBtns = threads.map(t => {
+    const b = document.createElement('button');
+    b.className = 'swatch';
+    b.style.background = t.hex;
+    b.title = t.name;
+    b.dataset.hex = t.hex;
+    b.addEventListener('click', () => setThread(t.hex));
+    threadRow.appendChild(b);
+    return b;
+  });
 
   async function redraw() {
     const master = getMaster();
@@ -63,44 +67,39 @@ export function createCard(caps, threads, getMaster) {
     });
   }
 
+  function paintSwatches() {
+    for (const b of capBtns) b.classList.toggle('active', b.dataset.id === state.cap.id);
+    for (const b of threadBtns) b.classList.toggle('active', b.dataset.hex === state.threadHex);
+  }
+
   function setCap(cap) {
     state.cap = cap;
-    capSel.value = cap.id;
-    paintSelects();
+    paintSwatches();
     redraw();
   }
   function setThread(hex) {
     state.threadHex = hex;
-    threadSel.value = hex;
-    paintSelects();
+    paintSwatches();
     redraw();
   }
-
-  function paintSelects() {
-    const c = state.cap;
-    capSel.style.backgroundColor = c.hex || '#fff';
-    capSel.style.color = contrastOn(c.hex);
-    threadSel.style.backgroundColor = state.threadHex;
-    threadSel.style.color = contrastOn(state.threadHex);
+  function toggleLock() {
+    state.locked = !state.locked;
+    el.classList.toggle('locked', state.locked);
+    lockBtn.textContent = state.locked ? '🔒' : '🔓';
   }
 
-  capSel.addEventListener('change', () => {
-    state.cap = caps.find(c => c.id === capSel.value);
-    paintSelects();
-    redraw();
-  });
-  threadSel.addEventListener('change', () => {
-    state.threadHex = threadSel.value;
-    paintSelects();
-    redraw();
-  });
+  lockBtn.addEventListener('click', toggleLock);
   removeBtn.addEventListener('click', () => {
     el.remove();
     cards.delete(state.id);
   });
+  saveBtn.addEventListener('click', () => {
+    if (onExport) onExport(entry);
+  });
 
-  cards.set(state.id, { state, redraw, el, setCap, setThread });
-  paintSelects();
+  const entry = { state, redraw, el, setCap, setThread, toggleLock };
+  cards.set(state.id, entry);
+  paintSwatches();
   redraw();
 
   return el;
