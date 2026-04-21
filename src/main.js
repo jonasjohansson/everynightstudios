@@ -2,8 +2,9 @@ import caps from './data/caps.json' with { type: 'json' };
 import threads from './data/threads.json' with { type: 'json' };
 import { createCard, redrawAll } from './cards.js';
 import { readLogoFile } from './lib/logo.js';
+import { exportZip } from './export.js';
 
-const master = { text: 'every night', logoImage: null, logoFilename: null };
+const master = { text: 'every night', logoImage: null, logoFilename: null, logoFile: null };
 const getMaster = () => master;
 
 const grid = document.getElementById('card-grid');
@@ -17,6 +18,7 @@ bar.innerHTML = `
   </label>
   <button class="logo-clear" hidden>clear logo</button>
   <button class="add">+ card</button>
+  <button class="export">export zip</button>
 `;
 
 bar.querySelector('.text-input').addEventListener('input', (e) => {
@@ -32,6 +34,7 @@ logoInput.addEventListener('change', async () => {
   if (!file) return;
   master.logoImage = await readLogoFile(file);
   master.logoFilename = file.name;
+  master.logoFile = file;
   logoClear.hidden = false;
   redrawAll();
 });
@@ -39,6 +42,7 @@ logoInput.addEventListener('change', async () => {
 logoClear.addEventListener('click', () => {
   master.logoImage = null;
   master.logoFilename = null;
+  master.logoFile = null;
   logoInput.value = '';
   logoClear.hidden = true;
   redrawAll();
@@ -46,6 +50,10 @@ logoClear.addEventListener('click', () => {
 
 bar.querySelector('.add').addEventListener('click', () => {
   grid.appendChild(createCard(caps, threads, getMaster));
+});
+
+bar.querySelector('.export').addEventListener('click', () => {
+  exportZip(threads, master);
 });
 
 for (let i = 0; i < 4; i++) {
