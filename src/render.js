@@ -1,6 +1,7 @@
 // src/render.js — draws a cap image plus text (or later, a logo) onto a canvas.
 import { resolveAnchor } from './lib/anchor.js';
 import { fitFontSize } from './lib/fontfit.js';
+import { tintRaster, svgToImage } from './lib/logo.js';
 
 const imgCache = new Map();
 export function loadImage(src) {
@@ -43,7 +44,17 @@ function drawText(ctx, text, cx, cy, boxW, color) {
   ctx.fillText(text, cx, cy);
 }
 
-// Stub — implemented in Task 8.
-async function drawLogo(ctx, logoImage, cx, cy, boxW, color) {
-  // no-op for now
+async function drawLogo(ctx, logo, cx, cy, boxW, color) {
+  let srcCanvas;
+  if (logo.kind === 'svg') {
+    srcCanvas = await svgToImage(logo.text, color);
+  } else {
+    srcCanvas = tintRaster(logo.img, color);
+  }
+  const w = srcCanvas.width || srcCanvas.naturalWidth;
+  const h = srcCanvas.height || srcCanvas.naturalHeight;
+  const scale = boxW / w;
+  const drawW = boxW;
+  const drawH = h * scale;
+  ctx.drawImage(srcCanvas, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
 }
