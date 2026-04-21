@@ -4,6 +4,13 @@ import { renderCard } from './render.js';
 let nextId = 1;
 export const cards = new Map();
 
+function contrastOn(hex) {
+  if (!hex) return '#000';
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+  return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#000' : '#fff';
+}
+
 export function createCard(caps, threads, getMaster) {
   const state = {
     id: nextId++,
@@ -35,12 +42,16 @@ export function createCard(caps, threads, getMaster) {
     const opt = document.createElement('option');
     opt.value = c.id;
     opt.textContent = c.name;
+    opt.style.backgroundColor = c.hex || '#fff';
+    opt.style.color = contrastOn(c.hex);
     capSel.appendChild(opt);
   }
   for (const t of threads) {
     const opt = document.createElement('option');
     opt.value = t.hex;
     opt.textContent = t.name;
+    opt.style.backgroundColor = t.hex;
+    opt.style.color = contrastOn(t.hex);
     threadSel.appendChild(opt);
   }
 
@@ -54,12 +65,22 @@ export function createCard(caps, threads, getMaster) {
     });
   }
 
+  function paintSelects() {
+    const c = state.cap;
+    capSel.style.backgroundColor = c.hex || '#fff';
+    capSel.style.color = contrastOn(c.hex);
+    threadSel.style.backgroundColor = state.threadHex;
+    threadSel.style.color = contrastOn(state.threadHex);
+  }
+
   capSel.addEventListener('change', () => {
     state.cap = caps.find(c => c.id === capSel.value);
+    paintSelects();
     redraw();
   });
   threadSel.addEventListener('change', () => {
     state.threadHex = threadSel.value;
+    paintSelects();
     redraw();
   });
   removeBtn.addEventListener('click', () => {
@@ -68,6 +89,7 @@ export function createCard(caps, threads, getMaster) {
   });
 
   cards.set(state.id, { state, redraw, el });
+  paintSelects();
   redraw();
 
   return el;
