@@ -1,6 +1,6 @@
-// Calibrated so that a slider value of 1.5 renders text at ~16cm —
-// the physical width of the cap front where embroidery goes.
-export const CAP_FRONT_CM = 10.67;
+// Calibrated so that a slider value of ~1.9 renders text at ~20cm —
+// the physical width of the cap's front panel / rim.
+export const CAP_FRONT_CM = 10.5;
 
 export function buildSpecs(cards, master, threadLookup) {
   const widthCm = Math.round(CAP_FRONT_CM * (master.fontScale ?? 1) * 10) / 10;
