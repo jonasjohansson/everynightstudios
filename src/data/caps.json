@@ -1,10 +1,9 @@
 [
   {
-    "id": "meme-lord-jeki-shoreline-cap-black-osfa",
-    "name": "OSFA",
-    "product": "MEME LORD JEKI SHORELINE CAP BLACK",
+    "id": "vintage-black",
+    "name": "Vintage Black",
     "hex": null,
-    "image": "public/caps/meme-lord-jeki-shoreline-cap-black-osfa.jpg",
+    "image": "public/caps/vintage-black.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -12,11 +11,10 @@
     }
   },
   {
-    "id": "meme-lord-jeki-pollen-cap-black-osfa",
-    "name": "OSFA",
-    "product": "MEME LORD JEKI POLLEN CAP BLACK",
+    "id": "vintage-bottle-green",
+    "name": "Vintage Bottle Green",
     "hex": null,
-    "image": "public/caps/meme-lord-jeki-pollen-cap-black-osfa.jpg",
+    "image": "public/caps/vintage-bottle-green.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -24,11 +22,10 @@
     }
   },
   {
-    "id": "meme-lord-jeki-gluten-cap-black-osfa",
-    "name": "OSFA",
-    "product": "MEME LORD JEKI GLUTEN CAP BLACK",
+    "id": "vintage-brown",
+    "name": "Vintage Brown",
     "hex": null,
-    "image": "public/caps/meme-lord-jeki-gluten-cap-black-osfa.jpg",
+    "image": "public/caps/vintage-brown.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -36,11 +33,10 @@
     }
   },
   {
-    "id": "studio-barnhus-neue-logo-cap-black-osfa",
-    "name": "OSFA",
-    "product": "STUDIO BARNHUS NEUE LOGO CAP BLACK",
+    "id": "vintage-cornflower",
+    "name": "Vintage Cornflower",
     "hex": null,
-    "image": "public/caps/studio-barnhus-neue-logo-cap-black-osfa.jpg",
+    "image": "public/caps/vintage-cornflower.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -48,11 +44,10 @@
     }
   },
   {
-    "id": "studio-barnhus-neue-logo-cap-camo-osfa",
-    "name": "OSFA",
-    "product": "STUDIO BARNHUS NEUE LOGO CAP CAMO",
+    "id": "vintage-denim",
+    "name": "Vintage Denim",
     "hex": null,
-    "image": "public/caps/studio-barnhus-neue-logo-cap-camo-osfa.jpg",
+    "image": "public/caps/vintage-denim.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -60,11 +55,10 @@
     }
   },
   {
-    "id": "angel-cap-khaki-osfa",
-    "name": "OSFA",
-    "product": "ANGEL CAP KHAKI",
+    "id": "vintage-dusky-pink",
+    "name": "Vintage Dusky Pink",
     "hex": null,
-    "image": "public/caps/angel-cap-khaki-osfa.jpg",
+    "image": "public/caps/vintage-dusky-pink.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -72,11 +66,10 @@
     }
   },
   {
-    "id": "studio-barnhus-logo-cap-black-osfa",
-    "name": "OSFA",
-    "product": "STUDIO BARNHUS LOGO CAP BLACK",
+    "id": "vintage-grey",
+    "name": "Vintage Grey",
     "hex": null,
-    "image": "public/caps/studio-barnhus-logo-cap-black-osfa.jpg",
+    "image": "public/caps/vintage-grey.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -84,11 +77,10 @@
     }
   },
   {
-    "id": "studio-barnhus-logo-cap-camo-osfa",
-    "name": "OSFA",
-    "product": "STUDIO BARNHUS LOGO CAP CAMO",
+    "id": "vintage-jungle-camo",
+    "name": "Vintage Jungle Camo",
     "hex": null,
-    "image": "public/caps/studio-barnhus-logo-cap-camo-osfa.jpg",
+    "image": "public/caps/vintage-jungle-camo.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -96,11 +88,10 @@
     }
   },
   {
-    "id": "moon-phases-logo-cap-brown-osfa",
-    "name": "OSFA",
-    "product": "MOON PHASES LOGO CAP BROWN",
+    "id": "vintage-light-denim",
+    "name": "Vintage Light Denim",
     "hex": null,
-    "image": "public/caps/moon-phases-logo-cap-brown-osfa.jpg",
+    "image": "public/caps/vintage-light-denim.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,
@@ -108,11 +99,65 @@
     }
   },
   {
-    "id": "design-your-own-cap-os",
-    "name": "OS",
-    "product": "DESIGN YOUR OWN CAP",
+    "id": "vintage-mustard",
+    "name": "Vintage Mustard",
     "hex": null,
-    "image": "public/caps/design-your-own-cap-os.jpg",
+    "image": "public/caps/vintage-mustard.png",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "vintage-olive",
+    "name": "Vintage Olive",
+    "hex": null,
+    "image": "public/caps/vintage-olive.png",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "vintage-orange",
+    "name": "Vintage Orange",
+    "hex": null,
+    "image": "public/caps/vintage-orange.png",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "vintage-red",
+    "name": "Vintage Red",
+    "hex": null,
+    "image": "public/caps/vintage-red.png",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "vintage-sage-green",
+    "name": "Vintage Sage Green",
+    "hex": null,
+    "image": "public/caps/vintage-sage-green.png",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "vintage-sand",
+    "name": "Vintage Sand",
+    "hex": null,
+    "image": "public/caps/vintage-sand.png",
     "anchor": {
       "x": 0.5,
       "y": 0.55,

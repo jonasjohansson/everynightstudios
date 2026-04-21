@@ -6,8 +6,5 @@
   "scripts": {
     "scrape": "node scripts/scrape.mjs",
     "test": "node --test"
-  },
-  "dependencies": {
-    "cheerio": "^1.0.0"
   }
 }
