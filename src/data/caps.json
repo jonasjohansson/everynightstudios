@@ -1,0 +1,122 @@
+[
+  {
+    "id": "meme-lord-jeki-shoreline-cap-black-osfa",
+    "name": "OSFA",
+    "product": "MEME LORD JEKI SHORELINE CAP BLACK",
+    "hex": null,
+    "image": "public/caps/meme-lord-jeki-shoreline-cap-black-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "meme-lord-jeki-pollen-cap-black-osfa",
+    "name": "OSFA",
+    "product": "MEME LORD JEKI POLLEN CAP BLACK",
+    "hex": null,
+    "image": "public/caps/meme-lord-jeki-pollen-cap-black-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "meme-lord-jeki-gluten-cap-black-osfa",
+    "name": "OSFA",
+    "product": "MEME LORD JEKI GLUTEN CAP BLACK",
+    "hex": null,
+    "image": "public/caps/meme-lord-jeki-gluten-cap-black-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "studio-barnhus-neue-logo-cap-black-osfa",
+    "name": "OSFA",
+    "product": "STUDIO BARNHUS NEUE LOGO CAP BLACK",
+    "hex": null,
+    "image": "public/caps/studio-barnhus-neue-logo-cap-black-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "studio-barnhus-neue-logo-cap-camo-osfa",
+    "name": "OSFA",
+    "product": "STUDIO BARNHUS NEUE LOGO CAP CAMO",
+    "hex": null,
+    "image": "public/caps/studio-barnhus-neue-logo-cap-camo-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "angel-cap-khaki-osfa",
+    "name": "OSFA",
+    "product": "ANGEL CAP KHAKI",
+    "hex": null,
+    "image": "public/caps/angel-cap-khaki-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "studio-barnhus-logo-cap-black-osfa",
+    "name": "OSFA",
+    "product": "STUDIO BARNHUS LOGO CAP BLACK",
+    "hex": null,
+    "image": "public/caps/studio-barnhus-logo-cap-black-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "studio-barnhus-logo-cap-camo-osfa",
+    "name": "OSFA",
+    "product": "STUDIO BARNHUS LOGO CAP CAMO",
+    "hex": null,
+    "image": "public/caps/studio-barnhus-logo-cap-camo-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "moon-phases-logo-cap-brown-osfa",
+    "name": "OSFA",
+    "product": "MOON PHASES LOGO CAP BROWN",
+    "hex": null,
+    "image": "public/caps/moon-phases-logo-cap-brown-osfa.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  },
+  {
+    "id": "design-your-own-cap-os",
+    "name": "OS",
+    "product": "DESIGN YOUR OWN CAP",
+    "hex": null,
+    "image": "public/caps/design-your-own-cap-os.jpg",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.55,
+      "width": 0.35
+    }
+  }
+]
