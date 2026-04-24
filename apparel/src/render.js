@@ -155,61 +155,47 @@ function designMetrics(design, area, W, H) {
 function drawDesign(ctx, design, area, W, H) {
   const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H);
   const blend = design.blendMode || 'source-over';
-  const tint = /^#[0-9a-f]{6}$/i.test(design.colorize) ? design.colorize : null;
-  const postTint = tint && blend !== 'source-over';
+  const isHex = /^#[0-9a-f]{6}$/i.test(design.colorize);
 
-  const place = (c) => {
-    c.translate(cx, cy);
-    if (rotation) c.rotate(rotation);
-  };
-
-  // Fast path: no post-tint needed — pre-colorize and draw with blend.
-  if (!postTint) {
-    const src = colorizedImage(design.image, design.colorize);
-    ctx.save();
-    place(ctx);
-    if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
-    ctx.drawImage(src, -drawW / 2, -drawH / 2, drawW, drawH);
-    ctx.restore();
-    return;
-  }
-
-  // Post-tint path: apply the tint to the blended result so the chosen color
-  // shows up regardless of blend mode.
-  const layer = document.createElement('canvas');
-  layer.width = W;
-  layer.height = H;
-  const lctx = layer.getContext('2d');
-  lctx.drawImage(ctx.canvas, 0, 0);
-
-  lctx.save();
-  place(lctx);
-  lctx.globalCompositeOperation = blend;
-  lctx.drawImage(design.image, -drawW / 2, -drawH / 2, drawW, drawH);
-  lctx.restore();
-
-  // Build a solid-tint mask shaped like the design's alpha.
-  const mask = document.createElement('canvas');
-  mask.width = W;
-  mask.height = H;
-  const mctx = mask.getContext('2d');
-  mctx.save();
-  place(mctx);
-  mctx.drawImage(design.image, -drawW / 2, -drawH / 2, drawW, drawH);
-  mctx.restore();
-  mctx.globalCompositeOperation = 'source-in';
-  mctx.fillStyle = tint;
-  mctx.fillRect(0, 0, W, H);
-
-  // Swap hue+chroma within the design region, preserving luminance from the blend.
-  lctx.globalCompositeOperation = 'color';
-  lctx.drawImage(mask, 0, 0);
+  // Custom hex + non-normal blend: weight alpha by luminance so dark pixels
+  // become transparent (the blend then naturally lets the shirt show through),
+  // and fill the bright pixels with the tint color.
+  const src = (isHex && blend !== 'source-over')
+    ? luminanceTint(design.image, design.colorize)
+    : colorizedImage(design.image, design.colorize);
 
   ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(layer, 0, 0);
+  ctx.translate(cx, cy);
+  if (rotation) ctx.rotate(rotation);
+  if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
+  ctx.drawImage(src, -drawW / 2, -drawH / 2, drawW, drawH);
   ctx.restore();
+}
+
+const lumTintCache = new Map();
+function luminanceTint(img, hex) {
+  const key = `${img.src}:lum:${hex}`;
+  if (lumTintCache.has(key)) return lumTintCache.get(key);
+  const nw = img.naturalWidth || COLORIZE_FALLBACK;
+  const nh = img.naturalHeight || COLORIZE_FALLBACK;
+  const c = document.createElement('canvas');
+  c.width = nw;
+  c.height = nh;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, nw, nh);
+  const data = ctx.getImageData(0, 0, nw, nh);
+  const px = data.data;
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i], g = px[i + 1], b = px[i + 2];
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b; // 0..255
+    px[i + 3] = (px[i + 3] * lum) / 255;
+  }
+  ctx.putImageData(data, 0, 0);
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.fillStyle = hex;
+  ctx.fillRect(0, 0, nw, nh);
+  lumTintCache.set(key, c);
+  return c;
 }
 
 const HANDLE_SIZE = 10;
