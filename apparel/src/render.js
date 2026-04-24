@@ -37,13 +37,13 @@ function colorizedImage(img, mode) {
     ctx.fillStyle = mode === 'white' ? '#ffffff' : '#000000';
     ctx.fillRect(0, 0, nw, nh);
   } else if (/^#[0-9a-f]{6}$/i.test(mode)) {
-    // Custom hex: tint the design — keep luminance, swap hue+chroma.
+    // Custom hex: paint the design as a solid color, masked by its alpha.
+    // (Non-normal blends instead use the post-tint path in drawDesign so the
+    // blend keeps the design's luminance and the tint is applied on top.)
     ctx.drawImage(img, 0, 0, nw, nh);
-    ctx.globalCompositeOperation = 'color';
+    ctx.globalCompositeOperation = 'source-in';
     ctx.fillStyle = mode;
     ctx.fillRect(0, 0, nw, nh);
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(img, 0, 0, nw, nh);
   } else {
     return img;
   }
