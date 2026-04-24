@@ -13,17 +13,29 @@ function loadImage(src) {
   return p;
 }
 
-const colorCache = new Map();
 const COLORIZE_FALLBACK = 1024;
+function intrinsicSize(img) {
+  const w = img.naturalWidth || img.width || COLORIZE_FALLBACK;
+  const h = img.naturalHeight || img.height || COLORIZE_FALLBACK;
+  return { w, h };
+}
+function cacheKey(img) {
+  // Images expose .src (data URL or path); HTMLCanvasElement does not, so
+  // fall back to a unique id stored on the canvas.
+  if (img.src) return img.src;
+  if (!img.__cacheKey) img.__cacheKey = `canvas-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+  return img.__cacheKey;
+}
+
+const colorCache = new Map();
 function colorizedImage(img, mode) {
   if (!mode || mode === 'original') return img;
-  const key = `${img.src}:${mode}`;
+  const key = `${cacheKey(img)}:${mode}`;
   if (colorCache.has(key)) return colorCache.get(key);
   // SVGs without width/height attrs can report naturalWidth/Height as 0 or a
   // 300x150 browser default. Use an explicit size and draw with dw/dh so SVG
   // and raster paths both fill the buffer.
-  const nw = img.naturalWidth || COLORIZE_FALLBACK;
-  const nh = img.naturalHeight || COLORIZE_FALLBACK;
+  const { w: nw, h: nh } = intrinsicSize(img);
   const c = document.createElement('canvas');
   c.width = nw;
   c.height = nh;
@@ -142,8 +154,9 @@ function drawMissing(ctx) {
 
 function designMetrics(design, area, W, H) {
   const img = design.image;
+  const { w: iw, h: ih } = intrinsicSize(img);
   const drawW = area.w * W * design.scale;
-  const drawH = drawW * (img.naturalHeight / img.naturalWidth);
+  const drawH = drawW * (ih / iw);
   return {
     drawW, drawH,
     cx: design.x * W,
@@ -179,10 +192,9 @@ function drawDesign(ctx, design, area, W, H) {
 
 const lumTintCache = new Map();
 function luminanceTint(img, hex) {
-  const key = `${img.src}:lum:${hex}`;
+  const key = `${cacheKey(img)}:lum:${hex}`;
   if (lumTintCache.has(key)) return lumTintCache.get(key);
-  const nw = img.naturalWidth || COLORIZE_FALLBACK;
-  const nh = img.naturalHeight || COLORIZE_FALLBACK;
+  const { w: nw, h: nh } = intrinsicSize(img);
   const c = document.createElement('canvas');
   c.width = nw;
   c.height = nh;

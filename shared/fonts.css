@@ -1,0 +1,21 @@
+@font-face {
+  font-family: "OPSPastPerfect";
+  src: url("fonts/OPSPastPerfect-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "OffBit";
+  src: url("fonts/OffBit-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "OffBit";
+  src: url("fonts/OffBit-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

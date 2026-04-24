@@ -13,6 +13,14 @@ const BLEND_MODES = [
   { id: 'multiply',    label: 'Mult' },
   { id: 'screen',      label: 'Scrn' },
 ];
+const FONTS = [
+  { id: 'offbit',        label: 'OffBit',         family: 'OffBit',         weight: 400 },
+  { id: 'offbit-bold',   label: 'OffBit Bold',    family: 'OffBit',         weight: 700 },
+  { id: 'past-perfect',  label: 'Past Perfect',   family: 'OPSPastPerfect', weight: 400 },
+];
+const DEFAULT_TEXT = 'design';
+const DEFAULT_FONT_ID = 'offbit';
+const DEFAULT_FONT_SIZE = 160;
 
 const RECENT_KEY = 'apparel:recent-designs';
 const LAST_KEY = (viewKey, itemId) => `apparel:last-design:${viewKey}:${itemId}`;
@@ -68,6 +76,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
         upload ${label.toLowerCase()} design
         <input type="file" accept="image/*" hidden>
       </label>
+      <button class="type-text">type</button>
+      <input class="text-input" type="text" placeholder="text" hidden>
+      <select class="font-select" hidden></select>
+      <input class="size-slider" type="range" min="40" max="400" step="2" hidden>
+      <input class="text-color" type="color" hidden>
       <button class="clear" hidden>clear</button>
       <button class="reset" hidden>reset</button>
       <button class="crop" hidden>circle</button>
@@ -79,6 +92,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
 
   const canvas = el.querySelector('canvas');
   const fileInput = el.querySelector('input[type=file]');
+  const typeBtn = el.querySelector('.type-text');
+  const textInput = el.querySelector('.text-input');
+  const fontSelect = el.querySelector('.font-select');
+  const sizeSlider = el.querySelector('.size-slider');
+  const textColorInput = el.querySelector('.text-color');
   const clearBtn = el.querySelector('.clear');
   const resetBtn = el.querySelector('.reset');
   const cropBtn = el.querySelector('.crop');
@@ -86,8 +104,17 @@ export function createView({ label, getItem, getColor, viewKey }) {
   const colorizeEl = el.querySelector('.colorize');
   const blendEl = el.querySelector('.blend');
 
+  for (const f of FONTS) {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    opt.textContent = f.label;
+    fontSelect.appendChild(opt);
+  }
+
   const defaultDesign = () => ({
+    kind: 'image',
     image: null, dataUrl: null, filename: null,
+    text: DEFAULT_TEXT, fontId: DEFAULT_FONT_ID, fontSize: DEFAULT_FONT_SIZE, textColor: '#000000',
     x: 0.5, y: 0.36, scale: 1, rotation: 0,
     colorize: 'original', blendMode: 'source-over', cropMode: 'none',
   });
@@ -200,17 +227,28 @@ export function createView({ label, getItem, getColor, viewKey }) {
   let currentItemId = getItem().id;
 
   function persist(forItemId = currentItemId) {
-    if (!design.dataUrl) {
+    if (!design.image) {
       setLast(viewKey, forItemId, null);
       return;
     }
-    setLast(viewKey, forItemId, {
-      dataUrl: design.dataUrl,
-      filename: design.filename,
+    const placement = {
       x: design.x, y: design.y,
       scale: design.scale, rotation: design.rotation,
       colorize: design.colorize, blendMode: design.blendMode, cropMode: design.cropMode,
-    });
+    };
+    if (design.kind === 'text') {
+      setLast(viewKey, forItemId, {
+        kind: 'text',
+        text: design.text, fontId: design.fontId, fontSize: design.fontSize, textColor: design.textColor,
+        ...placement,
+      });
+    } else {
+      setLast(viewKey, forItemId, {
+        kind: 'image',
+        dataUrl: design.dataUrl, filename: design.filename,
+        ...placement,
+      });
+    }
   }
   let persistTimer = null;
   function schedulePersist() {
@@ -239,8 +277,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
     currentItemId = newItemId;
 
     const saved = getLast(viewKey, newItemId);
-    if (saved && saved.dataUrl) {
-      if (design.dataUrl === saved.dataUrl && design.image) {
+    if (saved && (saved.dataUrl || saved.kind === 'text')) {
+      if (saved.kind === 'text') {
+        await enterTextMode(saved);
+      } else if (design.dataUrl === saved.dataUrl && design.image && design.kind === 'image') {
         applyPlacement(saved);
         buildColorize();
         buildBlend();
@@ -267,7 +307,131 @@ export function createView({ label, getItem, getColor, viewKey }) {
     }
   }
 
+  function showImageControls() {
+    typeBtn.classList.remove('active');
+    textInput.hidden = true;
+    fontSelect.hidden = true;
+    sizeSlider.hidden = true;
+    textColorInput.hidden = true;
+  }
+  function showTextControls() {
+    typeBtn.classList.add('active');
+    textInput.hidden = false;
+    fontSelect.hidden = false;
+    sizeSlider.hidden = false;
+    textColorInput.hidden = false;
+  }
+
+  async function renderTextDesign() {
+    const fontDef = FONTS.find(f => f.id === design.fontId) || FONTS[0];
+    const text = design.text || ' ';
+    const fontSize = design.fontSize || DEFAULT_FONT_SIZE;
+    const textColor = design.textColor || '#000000';
+    const fontSpec = `${fontDef.weight} ${fontSize}px "${fontDef.family}"`;
+
+    if (document.fonts && document.fonts.load) {
+      try { await document.fonts.load(fontSpec, text); } catch {}
+    }
+
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = fontSpec;
+    const m = measure.measureText(text);
+    const padX = Math.max(20, fontSize * 0.2);
+    const padY = Math.max(10, fontSize * 0.25);
+    const w = Math.max(1, Math.ceil(m.width) + padX * 2);
+    const h = Math.max(1, Math.ceil(fontSize * 1.4) + padY * 2);
+
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.font = fontSpec;
+    ctx.fillStyle = textColor;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillText(text, padX, h / 2);
+
+    const dataUrl = c.toDataURL('image/png');
+    const img = await loadImageFromDataUrl(dataUrl);
+    design.image = img;
+    design.dataUrl = dataUrl;
+    design.filename = `text-${slugifyForFilename(text) || 'design'}.png`;
+  }
+
+  function slugifyForFilename(s) {
+    return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  }
+
+  async function enterTextMode(initial = null) {
+    design.kind = 'text';
+    design.text = initial?.text ?? (design.text || DEFAULT_TEXT);
+    design.fontId = initial?.fontId ?? (design.fontId || DEFAULT_FONT_ID);
+    design.fontSize = initial?.fontSize ?? (design.fontSize || DEFAULT_FONT_SIZE);
+    design.textColor = initial?.textColor ?? (design.textColor || '#000000');
+    if (initial) {
+      applyPlacement(initial);
+    } else {
+      applyDesignArea();
+      design.scale = 1;
+      design.rotation = 0;
+      design.colorize = 'original';
+      design.blendMode = 'source-over';
+      design.cropMode = 'none';
+    }
+    textInput.value = design.text;
+    fontSelect.value = design.fontId;
+    sizeSlider.value = String(design.fontSize);
+    textColorInput.value = design.textColor;
+    await renderTextDesign();
+    selected = true;
+    clearBtn.hidden = false;
+    resetBtn.hidden = false;
+    cropBtn.hidden = false;
+    colorizeEl.hidden = false;
+    blendEl.hidden = false;
+    showTextControls();
+    buildColorize();
+    buildBlend();
+    syncCrop();
+    schedulePersist();
+    redraw();
+  }
+
+  typeBtn.addEventListener('click', () => {
+    if (design.kind === 'text') {
+      // toggling off ends text mode by clearing the design entirely.
+      clearBtn.click();
+      return;
+    }
+    enterTextMode();
+  });
+  textInput.addEventListener('input', async () => {
+    design.text = textInput.value;
+    await renderTextDesign();
+    schedulePersist();
+    redraw();
+  });
+  fontSelect.addEventListener('change', async () => {
+    design.fontId = fontSelect.value;
+    await renderTextDesign();
+    schedulePersist();
+    redraw();
+  });
+  sizeSlider.addEventListener('input', async () => {
+    design.fontSize = parseInt(sizeSlider.value, 10) || DEFAULT_FONT_SIZE;
+    await renderTextDesign();
+    schedulePersist();
+    redraw();
+  });
+  textColorInput.addEventListener('input', async () => {
+    design.textColor = textColorInput.value;
+    await renderTextDesign();
+    schedulePersist();
+    redraw();
+  });
+
   function setDesign(image, dataUrl, filename, placement = null) {
+    design.kind = 'image';
     design.image = image;
     design.dataUrl = dataUrl;
     design.filename = filename;
@@ -287,6 +451,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     cropBtn.hidden = false;
     colorizeEl.hidden = false;
     blendEl.hidden = false;
+    showImageControls();
     buildColorize();
     buildBlend();
     syncCrop();
@@ -339,6 +504,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     cropBtn.hidden = true;
     colorizeEl.hidden = true;
     blendEl.hidden = true;
+    showImageControls();
     selected = false;
     setLast(viewKey, currentItemId, null);
     renderRecent();
@@ -475,16 +641,47 @@ export function createView({ label, getItem, getColor, viewKey }) {
 
   // Restore last-used design for this (view, item), if any.
   const last = getLast(viewKey, currentItemId);
-  if (last && last.dataUrl) {
-    loadImageFromDataUrl(last.dataUrl)
-      .then((img) => setDesign(img, last.dataUrl, last.filename, last))
-      .catch(() => setLast(viewKey, currentItemId, null));
+  if (last) {
+    if (last.kind === 'text') {
+      enterTextMode(last).catch(() => setLast(viewKey, currentItemId, null));
+    } else if (last.dataUrl) {
+      loadImageFromDataUrl(last.dataUrl)
+        .then((img) => setDesign(img, last.dataUrl, last.filename, last))
+        .catch(() => setLast(viewKey, currentItemId, null));
+    }
+  }
+
+  async function setGlobalColor(hex) {
+    if (!design.image) return;
+    design.colorize = hex;
+    if (design.kind === 'text') {
+      design.textColor = hex;
+      textColorInput.value = hex;
+      await renderTextDesign();
+    }
+    if (!colorizeEl.hidden) buildColorize();
+    schedulePersist();
+    redraw();
+  }
+  async function clearGlobalColor() {
+    if (!design.image) return;
+    design.colorize = 'original';
+    if (design.kind === 'text') {
+      design.textColor = '#000000';
+      textColorInput.value = '#000000';
+      await renderTextDesign();
+    }
+    if (!colorizeEl.hidden) buildColorize();
+    schedulePersist();
+    redraw();
   }
 
   return {
     el,
     redraw,
     loadForCurrentItem,
+    setGlobalColor,
+    clearGlobalColor,
     getDesign: () => design,
     getHandlesVisible: () => selected,
     setHandlesVisible: (v) => { selected = !!v; },

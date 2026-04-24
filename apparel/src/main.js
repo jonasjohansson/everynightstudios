@@ -38,6 +38,12 @@ bar.innerHTML = `
     <div class="swatches"></div>
   </label>
   <span class="color-name"></span>
+  <span class="sep"></span>
+  <label>
+    design
+    <input class="design-color" type="color" value="#ff3366">
+    <button class="design-color-clear" title="reset design colors">×</button>
+  </label>
   <span class="spacer"></span>
   <button class="export">export zip</button>
 `;
@@ -47,6 +53,8 @@ const styleSelect = bar.querySelector('select.style');
 const sourceLink = bar.querySelector('a.source');
 const swatchRow = bar.querySelector('.swatches');
 const colorName = bar.querySelector('.color-name');
+const designColor = bar.querySelector('input.design-color');
+const designColorClear = bar.querySelector('button.design-color-clear');
 
 function updateSourceLink() {
   const item = getItem();
@@ -126,6 +134,15 @@ const front = createView({ label: 'Front', getItem, getColor, viewKey: 'front' }
 const back  = createView({ label: 'Back',  getItem, getColor, viewKey: 'back'  });
 views.appendChild(front.el);
 views.appendChild(back.el);
+
+designColor.addEventListener('input', () => {
+  front.setGlobalColor(designColor.value);
+  back.setGlobalColor(designColor.value);
+});
+designColorClear.addEventListener('click', () => {
+  front.clearGlobalColor();
+  back.clearGlobalColor();
+});
 
 bar.querySelector('button.export').addEventListener('click', async () => {
   try {
