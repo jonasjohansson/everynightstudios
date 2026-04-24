@@ -14,6 +14,48 @@ const BLEND_MODES = [
   { id: 'screen',      label: 'Scrn' },
 ];
 
+const RECENT_KEY = 'apparel:recent-designs';
+const LAST_KEY = (viewKey) => `apparel:last-design:${viewKey}`;
+const MAX_RECENT = 6;
+
+function readRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+  catch { return []; }
+}
+function writeRecent(list) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT))); }
+  catch { /* quota exceeded — silently skip */ }
+}
+function pushRecent(entry) {
+  const list = readRecent().filter(r => r.dataUrl !== entry.dataUrl);
+  list.unshift(entry);
+  writeRecent(list);
+}
+function setLast(viewKey, entry) {
+  try {
+    if (entry) localStorage.setItem(LAST_KEY(viewKey), JSON.stringify(entry));
+    else localStorage.removeItem(LAST_KEY(viewKey));
+  } catch { /* ignore */ }
+}
+function getLast(viewKey) {
+  try {
+    const raw = localStorage.getItem(LAST_KEY(viewKey));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = dataUrl;
+  });
+}
+
+const recentSubscribers = new Set();
+function subscribeRecent(fn) { recentSubscribers.add(fn); return () => recentSubscribers.delete(fn); }
+function notifyRecent() { for (const fn of recentSubscribers) fn(); }
+
 export function createView({ label, getItem, getColor, viewKey }) {
   const el = document.createElement('section');
   el.className = 'view';
@@ -27,6 +69,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       </label>
       <button class="clear" hidden>clear</button>
       <button class="reset" hidden>reset</button>
+      <div class="recent" hidden></div>
       <div class="colorize" hidden></div>
       <div class="blend" hidden></div>
     </div>
@@ -36,6 +79,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   const fileInput = el.querySelector('input[type=file]');
   const clearBtn = el.querySelector('.clear');
   const resetBtn = el.querySelector('.reset');
+  const recentEl = el.querySelector('.recent');
   const colorizeEl = el.querySelector('.colorize');
   const blendEl = el.querySelector('.blend');
 
@@ -136,13 +180,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
     syncBlend();
   }
 
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
-    const { image, dataUrl } = await loadImageFromFile(file);
+  function setDesign(image, dataUrl, filename) {
     design.image = image;
     design.dataUrl = dataUrl;
-    design.filename = file.name;
+    design.filename = filename;
     applyDesignArea();
     design.scale = 1;
     design.rotation = 0;
@@ -155,7 +196,45 @@ export function createView({ label, getItem, getColor, viewKey }) {
     blendEl.hidden = false;
     buildColorize();
     buildBlend();
+    pushRecent({ dataUrl, filename, ts: Date.now() });
+    setLast(viewKey, { dataUrl, filename });
+    notifyRecent();
     redraw();
+  }
+
+  function renderRecent() {
+    recentEl.innerHTML = '';
+    const list = readRecent();
+    if (list.length === 0) {
+      recentEl.hidden = true;
+      return;
+    }
+    recentEl.hidden = false;
+    for (const entry of list) {
+      const b = document.createElement('button');
+      b.className = 'recent-item';
+      b.style.backgroundImage = `url("${entry.dataUrl}")`;
+      b.title = entry.filename;
+      b.classList.toggle('active', design.dataUrl === entry.dataUrl);
+      b.addEventListener('click', async () => {
+        try {
+          const img = await loadImageFromDataUrl(entry.dataUrl);
+          setDesign(img, entry.dataUrl, entry.filename);
+        } catch (e) {
+          console.warn('failed to load recent design:', e);
+        }
+      });
+      recentEl.appendChild(b);
+    }
+  }
+  subscribeRecent(renderRecent);
+  renderRecent();
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const { image, dataUrl } = await loadImageFromFile(file);
+    setDesign(image, dataUrl, file.name);
   });
 
   clearBtn.addEventListener('click', () => {
@@ -166,6 +245,8 @@ export function createView({ label, getItem, getColor, viewKey }) {
     colorizeEl.hidden = true;
     blendEl.hidden = true;
     selected = false;
+    setLast(viewKey, null);
+    renderRecent();
     redraw();
   });
 
@@ -294,6 +375,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
   canvas.addEventListener('pointercancel', endDrag);
 
   redraw();
+
+  // Restore last-used design for this view, if any.
+  const last = getLast(viewKey);
+  if (last && last.dataUrl) {
+    loadImageFromDataUrl(last.dataUrl)
+      .then((img) => setDesign(img, last.dataUrl, last.filename))
+      .catch(() => setLast(viewKey, null));
+  }
 
   return {
     el,

@@ -67,6 +67,27 @@ main#views {
 .view .controls button:hover,
 .view .controls .file-label:hover { background: var(--hover); }
 
+/* Recent designs — thumbnails for quick re-pick */
+.view .controls .recent {
+  display: flex;
+  gap: 4px;
+  margin-left: 4px;
+}
+.view .controls .recent-item {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background-color: var(--panel);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.view .controls .recent-item:hover { border-color: var(--fg); }
+.view .controls .recent-item.active { outline: 2px solid var(--fg); outline-offset: 1px; }
+
 /* Colorize / blend toggle groups */
 .view .controls .colorize,
 .view .controls .blend { display: flex; gap: 0; margin-left: 4px; }
