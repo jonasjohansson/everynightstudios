@@ -110,16 +110,16 @@ brandSelect.addEventListener('change', () => {
   renderStyles();
   updateSourceLink();
   renderSwatches();
-  front.redraw();
-  back.redraw();
+  front.loadForCurrentItem();
+  back.loadForCurrentItem();
 });
 
 styleSelect.addEventListener('change', () => {
   state.itemId = styleSelect.value;
   updateSourceLink();
   renderSwatches();
-  front.redraw();
-  back.redraw();
+  front.loadForCurrentItem();
+  back.loadForCurrentItem();
 });
 
 const front = createView({ label: 'Front', getItem, getColor, viewKey: 'front' });

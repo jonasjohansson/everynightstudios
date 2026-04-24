@@ -66,6 +66,8 @@ main#views {
 }
 .view .controls button:hover,
 .view .controls .file-label:hover { background: var(--hover); }
+.view .controls button.active { background: var(--fg); color: var(--panel); border-color: var(--fg); }
+.view .controls button.active:hover { background: var(--fg); }
 
 /* Recent designs — thumbnails for quick re-pick */
 .view .controls .recent {

@@ -2,19 +2,31 @@
 import { buildSpecs, CAP_FRONT_CM } from './lib/specs.js';
 import { cards } from './cards.js';
 
+const PREFIX = 'everynightstudios';
+
 function slugify(s) {
   return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+function splitFilename(filename) {
+  const idx = (filename || '').lastIndexOf('.');
+  if (idx > 0) {
+    return { name: filename.slice(0, idx), ext: filename.slice(idx + 1).toLowerCase() };
+  }
+  return { name: filename || 'logo', ext: 'png' };
+}
+
 export function buildFilename(index, cap, threadName, text, widthCm) {
   const parts = [
+    PREFIX,
+    'caps',
     String(index).padStart(2, '0'),
     cap.id,
     threadName ? `thread-${slugify(threadName)}` : '',
     text ? `text-${slugify(text)}` : '',
-    widthCm ? `${widthCm}cm` : '',
+    widthCm ? slugify(`${widthCm}cm`) : '',
   ].filter(Boolean);
-  return parts.join('--') + '.png';
+  return parts.join('-') + '.png';
 }
 
 function downloadBlob(blob, filename) {
@@ -51,13 +63,14 @@ export async function exportZip(threads, master) {
     zip.file(name, blob);
   }
 
-  zip.file('specs.json', JSON.stringify(specs, null, 2));
+  zip.file(`${PREFIX}-caps-specs.json`, JSON.stringify(specs, null, 2));
 
   if (master.logoFile) {
-    zip.file(`logo-${master.logoFilename}`, master.logoFile);
+    const { name, ext } = splitFilename(master.logoFilename);
+    zip.file(`${PREFIX}-caps-logo-${slugify(name)}.${ext}`, master.logoFile);
   }
 
   const out = await zip.generateAsync({ type: 'blob' });
-  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  downloadBlob(out, `everynight-prototype-${ts}.zip`);
+  const date = new Date().toISOString().slice(0, 10);
+  downloadBlob(out, `${PREFIX}-caps-${date}.zip`);
 }

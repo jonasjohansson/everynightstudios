@@ -1,5 +1,19 @@
+const PREFIX = 'everynightstudios';
+
 function slugify(s) {
   return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function joinSlugs(...parts) {
+  return parts.filter(Boolean).map(slugify).filter(Boolean).join('-');
+}
+
+function splitFilename(filename) {
+  const idx = (filename || '').lastIndexOf('.');
+  if (idx > 0) {
+    return { name: filename.slice(0, idx), ext: filename.slice(idx + 1).toLowerCase() };
+  }
+  return { name: filename || 'design', ext: 'png' };
 }
 
 function downloadBlob(blob, filename) {
@@ -40,30 +54,32 @@ async function combineViews(frontCanvas, backCanvas) {
 
 export async function exportZip({ item, color, front, back }) {
   const zip = new JSZip();
-  const base = [item.id, color.id].filter(Boolean).map(slugify).join('--');
+  const base = joinSlugs(PREFIX, 'apparel', item.id, color.id);
 
   const [frontBlob, backBlob] = await Promise.all([
     snapshotView(front),
     snapshotView(back),
   ]);
   const combinedBlob = await combineViews(front.el.querySelector('canvas'), back.el.querySelector('canvas'));
-  zip.file(`${base}--mockup.png`, combinedBlob);
-  zip.file(`${base}--front.png`, frontBlob);
-  zip.file(`${base}--back.png`, backBlob);
+  zip.file(`${base}-mockup.png`, combinedBlob);
+  zip.file(`${base}-front.png`, frontBlob);
+  zip.file(`${base}-back.png`, backBlob);
 
   const fd = front.getDesign();
   const bd = back.getDesign();
 
   if (fd?.dataUrl) {
-    zip.file(`design--front--${fd.filename}`, dataUrlToBlob(fd.dataUrl));
+    const { name, ext } = splitFilename(fd.filename);
+    zip.file(`${base}-design-front-${slugify(name)}.${ext}`, dataUrlToBlob(fd.dataUrl));
   }
   if (bd?.dataUrl) {
-    zip.file(`design--back--${bd.filename}`, dataUrlToBlob(bd.dataUrl));
+    const { name, ext } = splitFilename(bd.filename);
+    zip.file(`${base}-design-back-${slugify(name)}.${ext}`, dataUrlToBlob(bd.dataUrl));
   }
 
   const out = await zip.generateAsync({ type: 'blob' });
-  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  downloadBlob(out, `apparel--${base}--${ts}.zip`);
+  const date = new Date().toISOString().slice(0, 10);
+  downloadBlob(out, `${base}-${date}.zip`);
 }
 
 function dataUrlToBlob(dataUrl) {

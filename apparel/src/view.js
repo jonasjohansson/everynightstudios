@@ -15,7 +15,7 @@ const BLEND_MODES = [
 ];
 
 const RECENT_KEY = 'apparel:recent-designs';
-const LAST_KEY = (viewKey) => `apparel:last-design:${viewKey}`;
+const LAST_KEY = (viewKey, itemId) => `apparel:last-design:${viewKey}:${itemId}`;
 const MAX_RECENT = 6;
 
 function readRecent() {
@@ -31,15 +31,16 @@ function pushRecent(entry) {
   list.unshift(entry);
   writeRecent(list);
 }
-function setLast(viewKey, entry) {
+function setLast(viewKey, itemId, entry) {
   try {
-    if (entry) localStorage.setItem(LAST_KEY(viewKey), JSON.stringify(entry));
-    else localStorage.removeItem(LAST_KEY(viewKey));
+    const key = LAST_KEY(viewKey, itemId);
+    if (entry) localStorage.setItem(key, JSON.stringify(entry));
+    else localStorage.removeItem(key);
   } catch { /* ignore */ }
 }
-function getLast(viewKey) {
+function getLast(viewKey, itemId) {
   try {
-    const raw = localStorage.getItem(LAST_KEY(viewKey));
+    const raw = localStorage.getItem(LAST_KEY(viewKey, itemId));
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
@@ -69,6 +70,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       </label>
       <button class="clear" hidden>clear</button>
       <button class="reset" hidden>reset</button>
+      <button class="crop" hidden>circle</button>
       <div class="recent" hidden></div>
       <div class="colorize" hidden></div>
       <div class="blend" hidden></div>
@@ -79,13 +81,15 @@ export function createView({ label, getItem, getColor, viewKey }) {
   const fileInput = el.querySelector('input[type=file]');
   const clearBtn = el.querySelector('.clear');
   const resetBtn = el.querySelector('.reset');
+  const cropBtn = el.querySelector('.crop');
   const recentEl = el.querySelector('.recent');
   const colorizeEl = el.querySelector('.colorize');
   const blendEl = el.querySelector('.blend');
 
   const defaultDesign = () => ({
     image: null, dataUrl: null, filename: null,
-    x: 0.5, y: 0.36, scale: 1, rotation: 0, colorize: 'original', blendMode: 'source-over',
+    x: 0.5, y: 0.36, scale: 1, rotation: 0,
+    colorize: 'original', blendMode: 'source-over', cropMode: 'none',
   });
   let design = defaultDesign();
   let selected = false;
@@ -130,6 +134,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.addEventListener('click', () => {
         design.colorize = m.id;
         syncColorize();
+        schedulePersist();
         redraw();
       });
       colorizeEl.appendChild(b);
@@ -144,6 +149,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       lastCustomHex = e.target.value;
       design.colorize = lastCustomHex;
       syncColorize();
+      schedulePersist();
       redraw();
     });
     colorizeEl.appendChild(picker);
@@ -169,6 +175,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.addEventListener('click', () => {
         design.blendMode = m.id;
         syncBlend();
+        schedulePersist();
         redraw();
       });
       blendEl.appendChild(b);
@@ -180,24 +187,111 @@ export function createView({ label, getItem, getColor, viewKey }) {
     syncBlend();
   }
 
-  function setDesign(image, dataUrl, filename) {
+  function syncCrop() {
+    cropBtn.classList.toggle('active', design.cropMode === 'circle');
+  }
+  cropBtn.addEventListener('click', () => {
+    design.cropMode = design.cropMode === 'circle' ? 'none' : 'circle';
+    syncCrop();
+    schedulePersist();
+    redraw();
+  });
+
+  let currentItemId = getItem().id;
+
+  function persist(forItemId = currentItemId) {
+    if (!design.dataUrl) {
+      setLast(viewKey, forItemId, null);
+      return;
+    }
+    setLast(viewKey, forItemId, {
+      dataUrl: design.dataUrl,
+      filename: design.filename,
+      x: design.x, y: design.y,
+      scale: design.scale, rotation: design.rotation,
+      colorize: design.colorize, blendMode: design.blendMode, cropMode: design.cropMode,
+    });
+  }
+  let persistTimer = null;
+  function schedulePersist() {
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => persist(), 200);
+  }
+
+  function applyPlacement(saved) {
+    design.x = saved.x ?? 0.5;
+    design.y = saved.y ?? 0.36;
+    design.scale = saved.scale ?? 1;
+    design.rotation = saved.rotation ?? 0;
+    design.colorize = saved.colorize ?? 'original';
+    design.blendMode = saved.blendMode ?? 'source-over';
+    design.cropMode = saved.cropMode ?? 'none';
+  }
+
+  async function loadForCurrentItem() {
+    const newItemId = getItem().id;
+    if (newItemId === currentItemId) {
+      redraw();
+      return;
+    }
+    // Save current placement under the previous item before switching.
+    if (design.dataUrl) persist(currentItemId);
+    currentItemId = newItemId;
+
+    const saved = getLast(viewKey, newItemId);
+    if (saved && saved.dataUrl) {
+      if (design.dataUrl === saved.dataUrl && design.image) {
+        applyPlacement(saved);
+        buildColorize();
+        buildBlend();
+        syncCrop();
+        redraw();
+      } else {
+        try {
+          const img = await loadImageFromDataUrl(saved.dataUrl);
+          setDesign(img, saved.dataUrl, saved.filename, saved);
+        } catch {
+          redraw();
+        }
+      }
+    } else if (design.image) {
+      // No saved state for the new item — keep the design but reset placement
+      // to defaults relative to the new item's design area.
+      applyDesignArea();
+      design.scale = 1;
+      design.rotation = 0;
+      persist();
+      redraw();
+    } else {
+      redraw();
+    }
+  }
+
+  function setDesign(image, dataUrl, filename, placement = null) {
     design.image = image;
     design.dataUrl = dataUrl;
     design.filename = filename;
-    applyDesignArea();
-    design.scale = 1;
-    design.rotation = 0;
-    design.colorize = 'original';
-    design.blendMode = 'source-over';
+    if (placement) {
+      applyPlacement(placement);
+    } else {
+      applyDesignArea();
+      design.scale = 1;
+      design.rotation = 0;
+      design.colorize = 'original';
+      design.blendMode = 'source-over';
+      design.cropMode = 'none';
+    }
     selected = true;
     clearBtn.hidden = false;
     resetBtn.hidden = false;
+    cropBtn.hidden = false;
     colorizeEl.hidden = false;
     blendEl.hidden = false;
     buildColorize();
     buildBlend();
+    syncCrop();
     pushRecent({ dataUrl, filename, ts: Date.now() });
-    setLast(viewKey, { dataUrl, filename });
+    persist();
     notifyRecent();
     redraw();
   }
@@ -242,10 +336,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
     fileInput.value = '';
     clearBtn.hidden = true;
     resetBtn.hidden = true;
+    cropBtn.hidden = true;
     colorizeEl.hidden = true;
     blendEl.hidden = true;
     selected = false;
-    setLast(viewKey, null);
+    setLast(viewKey, currentItemId, null);
     renderRecent();
     redraw();
   });
@@ -255,6 +350,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     design.scale = 1;
     design.rotation = 0;
     selected = true;
+    schedulePersist();
     redraw();
   });
 
@@ -370,23 +466,25 @@ export function createView({ label, getItem, getColor, viewKey }) {
     try { canvas.releasePointerCapture(e.pointerId); } catch {}
     const { x, y } = toCanvasCoords(e);
     canvas.style.cursor = cursorForMode(modeAtPoint(x, y), false);
+    schedulePersist();
   };
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
   redraw();
 
-  // Restore last-used design for this view, if any.
-  const last = getLast(viewKey);
+  // Restore last-used design for this (view, item), if any.
+  const last = getLast(viewKey, currentItemId);
   if (last && last.dataUrl) {
     loadImageFromDataUrl(last.dataUrl)
-      .then((img) => setDesign(img, last.dataUrl, last.filename))
-      .catch(() => setLast(viewKey, null));
+      .then((img) => setDesign(img, last.dataUrl, last.filename, last))
+      .catch(() => setLast(viewKey, currentItemId, null));
   }
 
   return {
     el,
     redraw,
+    loadForCurrentItem,
     getDesign: () => design,
     getHandlesVisible: () => selected,
     setHandlesVisible: (v) => { selected = !!v; },
