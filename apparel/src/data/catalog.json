@@ -1,0 +1,111 @@
+[
+  {
+    "id": "sttu199",
+    "brand": "Stanley/Stella",
+    "style": "STTU199",
+    "name": "Creator 2.0 Long Sleeve",
+    "kind": "longsleeve",
+    "source": "https://stanleystella.com/en-eu/creator-2-0-long-sleeve-sttu199",
+    "design": {
+      "front": { "x": 0.5, "y": 0.38, "w": 0.22 },
+      "back":  { "x": 0.5, "y": 0.34, "w": 0.32 }
+    },
+    "colors": [
+      { "id": "c001", "name": "White",             "hex": "#f2efe6", "front": "public/garments/sttu199/front-c001.avif", "back": "public/garments/sttu199/back-c001.avif" },
+      { "id": "c002", "name": "Black",             "hex": "#1a1a1a", "front": "public/garments/sttu199/front-c002.avif", "back": "public/garments/sttu199/back-c002.avif" },
+      { "id": "c004", "name": "Red",               "hex": "#a52a2a", "front": "public/garments/sttu199/front-c004.avif", "back": "public/garments/sttu199/back-c004.avif" },
+      { "id": "c036", "name": "Glazed Green",      "hex": "#6c7146", "front": "public/garments/sttu199/front-c036.avif", "back": "public/garments/sttu199/back-c036.avif" },
+      { "id": "c054", "name": "Natural Raw",       "hex": "#ded5c1", "front": "public/garments/sttu199/front-c054.avif", "back": "public/garments/sttu199/back-c054.avif" },
+      { "id": "c088", "name": "Worker Blue",       "hex": "#4a5c6e", "front": "public/garments/sttu199/front-c088.avif", "back": "public/garments/sttu199/back-c088.avif" },
+      { "id": "c116", "name": "Red Brown",         "hex": "#6b3e2d", "front": "public/garments/sttu199/front-c116.avif", "back": "public/garments/sttu199/back-c116.avif" },
+      { "id": "c146", "name": "Cool Heather Grey", "hex": "#a2a6a8", "front": "public/garments/sttu199/front-c146.avif", "back": "public/garments/sttu199/back-c146.avif" },
+      { "id": "c223", "name": "Khaki",             "hex": "#8a7b5e", "front": "public/garments/sttu199/front-c223.avif", "back": "public/garments/sttu199/back-c223.avif" },
+      { "id": "c250", "name": "Heather Gray",      "hex": "#a8a8a6", "front": "public/garments/sttu199/front-c250.avif", "back": "public/garments/sttu199/back-c250.avif" },
+      { "id": "c727", "name": "French Navy",       "hex": "#1e2940", "front": "public/garments/sttu199/front-c727.avif", "back": "public/garments/sttu199/back-c727.avif" },
+      { "id": "c730", "name": "Heritage Brown",    "hex": "#5d4837", "front": "public/garments/sttu199/front-c730.avif", "back": "public/garments/sttu199/back-c730.avif" }
+    ]
+  },
+  {
+    "id": "gildan-i2400",
+    "brand": "Gildan",
+    "style": "I2400",
+    "name": "Ultra Cotton Long Sleeve",
+    "kind": "longsleeve",
+    "source": "https://gildan.se/en/gi2400-en-black",
+    "tintBase": {
+      "front": { "overlay": "public/garments/gildan-i2400/tint-front.png" },
+      "back":  { "overlay": "public/garments/gildan-i2400/tint-back.png"  }
+    },
+    "design": {
+      "front": { "x": 0.5, "y": 0.36, "w": 0.28 },
+      "back":  { "x": 0.5, "y": 0.34, "w": 0.42 }
+    },
+    "notes": "S–3XL in all colors; S–5XL in Black, Charcoal, Dark Heather, Navy, Orange, Red, Royal, Safety Orange, Safety Green, Sport Grey, White. 205g/m² (200g/m² white). 100% cotton; Ash Grey 99/1, Sport Grey 90/10, Dark Heather / Safety Green / Safety Orange 50/50.",
+    "colors": [
+      { "id": "black",          "name": "Black",          "hex": "#1a1a1a" },
+      { "id": "white",          "name": "White",          "hex": "#f2f2f0" },
+      { "id": "charcoal",       "name": "Charcoal",       "hex": "#4b4b4d" },
+      { "id": "dark-heather",   "name": "Dark Heather",   "hex": "#3e434a" },
+      { "id": "sport-grey",     "name": "Sport Grey",     "hex": "#acacaa" },
+      { "id": "ash-grey",       "name": "Ash Grey",       "hex": "#d6d6d3", "front": "public/garments/gildan-i2400/front-ash-grey.jpg", "back": "public/garments/gildan-i2400/back-ash-grey.jpg" },
+      { "id": "navy",           "name": "Navy",           "hex": "#1a2537" },
+      { "id": "royal",          "name": "Royal",          "hex": "#2b5cab" },
+      { "id": "carolina-blue",  "name": "Carolina Blue",  "hex": "#7ca1cf" },
+      { "id": "light-blue",     "name": "Light Blue",     "hex": "#b3d2ec" },
+      { "id": "red",            "name": "Red",            "hex": "#ce2027" },
+      { "id": "cardinal-red",   "name": "Cardinal Red",   "hex": "#8f2a3e" },
+      { "id": "maroon",         "name": "Maroon",         "hex": "#5e1f2a" },
+      { "id": "light-pink",     "name": "Light Pink",     "hex": "#ecb8c0" },
+      { "id": "orange",         "name": "Orange",         "hex": "#c6502c" },
+      { "id": "safety-orange",  "name": "Safety Orange",  "hex": "#ed7321" },
+      { "id": "gold",           "name": "Gold",           "hex": "#ddb247" },
+      { "id": "safety-green",   "name": "Safety Green",   "hex": "#c7e03a" },
+      { "id": "irish-green",    "name": "Irish Green",    "hex": "#3e9a4d" },
+      { "id": "forest-green",   "name": "Forest Green",   "hex": "#243f2f" },
+      { "id": "dark-chocolate", "name": "Dark Chocolate", "hex": "#3f3027" }
+    ]
+  },
+  {
+    "id": "ascolour-5083",
+    "brand": "AS Colour",
+    "style": "5083",
+    "name": "Heavy Faded L/S Tee",
+    "kind": "longsleeve",
+    "source": "https://ascolour.eu/heavy-faded-l-s-tee-5083/",
+    "design": {
+      "front": { "x": 0.5, "y": 0.38, "w": 0.28 },
+      "back":  { "x": 0.5, "y": 0.34, "w": 0.38 }
+    },
+    "notes": "100% carded cotton, 7.1oz, garment dyed & preshrunk. Boxy relaxed fit, dropped shoulders, cuffed sleeves.",
+    "colors": [
+      {
+        "id": "faded-bone",
+        "name": "Faded Bone",
+        "hex": "#e6dfce",
+        "front": "public/garments/ascolour-5083/front-faded-bone.webp",
+        "back":  "public/garments/ascolour-5083/back-faded-bone.webp"
+      },
+      {
+        "id": "faded-grey",
+        "name": "Faded Grey",
+        "hex": "#a8a39a",
+        "front": "public/garments/ascolour-5083/front-faded-grey.webp",
+        "back":  "public/garments/ascolour-5083/back-faded-grey.jpg"
+      },
+      {
+        "id": "faded-khaki",
+        "name": "Faded Khaki",
+        "hex": "#8a7d5e",
+        "front": "public/garments/ascolour-5083/front-faded-khaki.webp",
+        "back":  "public/garments/ascolour-5083/back-faded-khaki.webp"
+      },
+      {
+        "id": "faded-black",
+        "name": "Faded Black",
+        "hex": "#2a2826",
+        "front": "public/garments/ascolour-5083/front-faded-black.jpg",
+        "back":  "public/garments/ascolour-5083/back-faded-black.webp"
+      }
+    ]
+  }
+]

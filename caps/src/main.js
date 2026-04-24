@@ -22,12 +22,15 @@ const grid = document.getElementById('cap-grid');
 const bar = document.getElementById('master-bar');
 
 bar.innerHTML = `
+  <a class="back" href="../">← tools</a>
+  <span class="sep"></span>
   <input class="text-input" type="text" maxlength="14" placeholder="type anything" value="${master.text}">
   <label class="file-label">
     upload logo
     <input class="logo-input" type="file" accept=".svg,.png,.jpg,.jpeg" hidden>
   </label>
   <button class="logo-clear" hidden>clear logo</button>
+  <span class="sep"></span>
   <label class="num-label">
     caps
     <input class="count" type="number" min="1" max="40" value="${DEFAULT_COUNT}">
@@ -41,6 +44,7 @@ bar.innerHTML = `
     y
     <input class="y-offset" type="range" min="-0.3" max="0.3" step="0.005" value="0">
   </label>
+  <span class="sep"></span>
   <button class="randomize">randomize</button>
   <button class="export">export zip</button>
 `;
@@ -161,7 +165,7 @@ fitGrid();
 // Load the default logo.
 (async () => {
   try {
-    const res = await fetch('public/default-logo.svg');
+    const res = await fetch('../shared/default-logo.svg');
     if (!res.ok) return;
     const text = await res.text();
     const blob = new Blob([text], { type: 'image/svg+xml' });

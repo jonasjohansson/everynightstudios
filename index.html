@@ -3,13 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Every Night Studios Cap Tool</title>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <title>Every Night Studios</title>
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <style>
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    header { padding: 24px 32px; display: flex; justify-content: space-between; align-items: baseline; }
+    header .brand { font-size: 13px; letter-spacing: 0.02em; }
+    main { flex: 1; padding: 64px 32px; max-width: 720px; margin: 0 auto; width: 100%; }
+    h1 { font-size: 14px; font-weight: 400; margin: 0 0 32px; }
+    ul { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--border); }
+    li { border-bottom: 1px solid var(--border); }
+    li a { display: flex; justify-content: space-between; align-items: baseline; padding: 20px 0; gap: 24px; }
+    li a:hover { color: var(--fg); background: var(--hover); padding-left: 12px; padding-right: 12px; margin: 0 -12px; }
+    li .title { font-size: 18px; }
+    li .desc { font-size: 13px; color: var(--muted); flex: 1; margin-left: 24px; }
+    footer { padding: 24px 32px; }
+  </style>
 </head>
 <body>
-  <header id="master-bar"></header>
-  <main id="cap-grid"></main>
-  <script type="module" src="src/main.js"></script>
+  <header>
+    <div class="brand">Every Night Studios</div>
+    <div class="caption">tools</div>
+  </header>
+  <main>
+    <h1 class="caption">Tools</h1>
+    <ul>
+      <li>
+        <a href="caps/">
+          <span class="title">Caps</span>
+          <span class="desc">Mockup grid for embroidered caps — text + logo, export for the print shop.</span>
+          <span class="caption">→</span>
+        </a>
+      </li>
+      <li>
+        <a href="apparel/">
+          <span class="title">Apparel</span>
+          <span class="desc">Design builder for t-shirts and longsleeves — upload front / back, place freely.</span>
+          <span class="caption">→</span>
+        </a>
+      </li>
+    </ul>
+  </main>
+  <footer class="caption">everynightstudios.se</footer>
 </body>
 </html>

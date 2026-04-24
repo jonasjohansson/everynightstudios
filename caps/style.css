@@ -1,0 +1,105 @@
+html, body { height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+
+/* Topbar extras specific to caps */
+#master-bar input.text-input { min-width: 180px; }
+#master-bar input.count { width: 54px; }
+#master-bar .size-readout {
+  min-width: 46px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* Cap grid */
+#cap-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 1px;
+  padding: 0;
+  background: var(--border);
+}
+
+/* Individual cap card */
+.cap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+.cap canvas {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.cap.locked { box-shadow: inset 0 0 0 2px var(--fg); }
+
+/* Lock badge (top-left) */
+.cap .lock {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.cap:hover .lock,
+.cap.locked .lock { opacity: 1; }
+
+/* Card controls (top-right) */
+.cap .controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  z-index: 2;
+}
+
+/* In-card swatches — tighter than default */
+.cap .swatches {
+  padding: 3px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  gap: 2px;
+}
+.cap .swatch { width: 14px; height: 14px; }
+
+/* Card action buttons */
+.cap .actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.cap:hover .actions { opacity: 1; }
+.cap .actions button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+.cap .actions button:hover { background: var(--hover); }
