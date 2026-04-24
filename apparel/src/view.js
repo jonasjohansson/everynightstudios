@@ -60,6 +60,9 @@ function loadImageFromDataUrl(dataUrl) {
     i.src = dataUrl;
   });
 }
+function slugifyForFilename(s) {
+  return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+}
 
 const recentSubscribers = new Set();
 function subscribeRecent(fn) { recentSubscribers.add(fn); return () => recentSubscribers.delete(fn); }
@@ -111,16 +114,31 @@ export function createView({ label, getItem, getColor, viewKey }) {
     fontSelect.appendChild(opt);
   }
 
-  const defaultDesign = () => ({
-    kind: 'image',
-    image: null, dataUrl: null, filename: null,
-    text: DEFAULT_TEXT, fontId: DEFAULT_FONT_ID, fontSize: DEFAULT_FONT_SIZE, textColor: '#000000',
+  const defaultPlacement = () => ({
     x: 0.5, y: 0.36, scale: 1, rotation: 0,
     colorize: 'original', blendMode: 'source-over', cropMode: 'none',
   });
-  let design = defaultDesign();
-  let selected = false;
+  const defaultImageSlot = () => ({
+    kind: 'image',
+    image: null, dataUrl: null, filename: null,
+    ...defaultPlacement(),
+  });
+  const defaultTextSlot = () => ({
+    kind: 'text',
+    image: null, dataUrl: null, filename: null,
+    text: DEFAULT_TEXT, fontId: DEFAULT_FONT_ID, fontSize: DEFAULT_FONT_SIZE, textColor: '#000000',
+    ...defaultPlacement(),
+  });
+
+  let slots = { image: defaultImageSlot(), text: defaultTextSlot() };
+  let activeKind = null; // 'image' | 'text' | null
+  let savedActiveKind = null;
   let lastCustomHex = '#ff3366';
+  let currentItemId = getItem().id;
+
+  const has = (s) => !!s && !!s.image;
+  const activeSlot = () => activeKind ? slots[activeKind] : null;
+  const anyContent = () => has(slots.image) || has(slots.text);
 
   function currentDesignArea() {
     return getItem().design[viewKey];
@@ -131,20 +149,32 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const color = getColor();
     const photoSrc = color[viewKey] || null;
     const tintLayers = !photoSrc && item.tintBase ? item.tintBase[viewKey] : null;
+    const designs = [];
+    if (has(slots.image)) designs.push(slots.image);
+    if (has(slots.text)) designs.push(slots.text);
     await renderView(canvas, {
       photoSrc,
       tintLayers,
       tintHex: color.hex,
-      design,
-      designArea: item.design[viewKey],
-      showHandles: !!design.image && selected,
+      designs,
+      designArea: currentDesignArea(),
+      activeDesign: activeSlot(),
     });
   }
 
-  function applyDesignArea() {
+  function applyDesignAreaTo(slot) {
     const area = currentDesignArea();
-    design.x = area.x;
-    design.y = area.y;
+    slot.x = area.x;
+    slot.y = area.y;
+  }
+  function applyPlacement(slot, saved) {
+    slot.x = saved.x ?? slot.x;
+    slot.y = saved.y ?? slot.y;
+    slot.scale = saved.scale ?? 1;
+    slot.rotation = saved.rotation ?? 0;
+    slot.colorize = saved.colorize ?? 'original';
+    slot.blendMode = saved.blendMode ?? 'source-over';
+    slot.cropMode = saved.cropMode ?? 'none';
   }
 
   let syncColorize = () => {};
@@ -159,7 +189,9 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.className = 'colorize-btn';
       b.dataset.id = m.id;
       b.addEventListener('click', () => {
-        design.colorize = m.id;
+        const a = activeSlot();
+        if (!a) return;
+        a.colorize = m.id;
         syncColorize();
         schedulePersist();
         redraw();
@@ -173,8 +205,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
     picker.title = 'custom color';
     picker.value = lastCustomHex;
     picker.addEventListener('input', (e) => {
+      const a = activeSlot();
+      if (!a) return;
       lastCustomHex = e.target.value;
-      design.colorize = lastCustomHex;
+      a.colorize = lastCustomHex;
       syncColorize();
       schedulePersist();
       redraw();
@@ -182,11 +216,13 @@ export function createView({ label, getItem, getColor, viewKey }) {
     colorizeEl.appendChild(picker);
 
     syncColorize = () => {
-      for (const b of btns) b.classList.toggle('active', design.colorize === b.dataset.id);
-      const isHex = /^#[0-9a-f]{6}$/i.test(design.colorize);
+      const a = activeSlot();
+      if (!a) return;
+      for (const b of btns) b.classList.toggle('active', a.colorize === b.dataset.id);
+      const isHex = /^#[0-9a-f]{6}$/i.test(a.colorize);
       picker.classList.toggle('active', isHex);
-      picker.style.background = isHex ? design.colorize : '';
-      if (isHex) picker.value = design.colorize;
+      picker.style.background = isHex ? a.colorize : '';
+      if (isHex) picker.value = a.colorize;
     };
     syncColorize();
   }
@@ -200,7 +236,9 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.className = 'colorize-btn';
       b.dataset.id = m.id;
       b.addEventListener('click', () => {
-        design.blendMode = m.id;
+        const a = activeSlot();
+        if (!a) return;
+        a.blendMode = m.id;
         syncBlend();
         schedulePersist();
         redraw();
@@ -209,46 +247,70 @@ export function createView({ label, getItem, getColor, viewKey }) {
       btns.push(b);
     }
     syncBlend = () => {
-      for (const b of btns) b.classList.toggle('active', design.blendMode === b.dataset.id);
+      const a = activeSlot();
+      if (!a) return;
+      for (const b of btns) b.classList.toggle('active', a.blendMode === b.dataset.id);
     };
     syncBlend();
   }
 
   function syncCrop() {
-    cropBtn.classList.toggle('active', design.cropMode === 'circle');
+    const a = activeSlot();
+    cropBtn.classList.toggle('active', a?.cropMode === 'circle');
   }
   cropBtn.addEventListener('click', () => {
-    design.cropMode = design.cropMode === 'circle' ? 'none' : 'circle';
+    const a = activeSlot();
+    if (!a) return;
+    a.cropMode = a.cropMode === 'circle' ? 'none' : 'circle';
     syncCrop();
     schedulePersist();
     redraw();
   });
 
-  let currentItemId = getItem().id;
+  function updateControls() {
+    const text = has(slots.text);
+    const a = activeSlot();
+    typeBtn.classList.toggle('active', text);
+    textInput.hidden = !text;
+    fontSelect.hidden = !text;
+    sizeSlider.hidden = !text;
+    textColorInput.hidden = !text;
+    clearBtn.hidden = !anyContent();
+    resetBtn.hidden = !a;
+    cropBtn.hidden = !a;
+    colorizeEl.hidden = !a;
+    blendEl.hidden = !a;
+    if (a) {
+      buildColorize();
+      buildBlend();
+      syncCrop();
+    }
+  }
 
   function persist(forItemId = currentItemId) {
-    if (!design.image) {
+    if (!anyContent()) {
       setLast(viewKey, forItemId, null);
       return;
     }
-    const placement = {
-      x: design.x, y: design.y,
-      scale: design.scale, rotation: design.rotation,
-      colorize: design.colorize, blendMode: design.blendMode, cropMode: design.cropMode,
+    setLast(viewKey, forItemId, {
+      image: has(slots.image) ? serializeImage(slots.image) : null,
+      text:  has(slots.text)  ? serializeText(slots.text)   : null,
+      active: activeKind,
+    });
+  }
+  function serializeImage(s) {
+    return {
+      dataUrl: s.dataUrl, filename: s.filename,
+      x: s.x, y: s.y, scale: s.scale, rotation: s.rotation,
+      colorize: s.colorize, blendMode: s.blendMode, cropMode: s.cropMode,
     };
-    if (design.kind === 'text') {
-      setLast(viewKey, forItemId, {
-        kind: 'text',
-        text: design.text, fontId: design.fontId, fontSize: design.fontSize, textColor: design.textColor,
-        ...placement,
-      });
-    } else {
-      setLast(viewKey, forItemId, {
-        kind: 'image',
-        dataUrl: design.dataUrl, filename: design.filename,
-        ...placement,
-      });
-    }
+  }
+  function serializeText(s) {
+    return {
+      text: s.text, fontId: s.fontId, fontSize: s.fontSize, textColor: s.textColor,
+      x: s.x, y: s.y, scale: s.scale, rotation: s.rotation,
+      colorize: s.colorize, blendMode: s.blendMode, cropMode: s.cropMode,
+    };
   }
   let persistTimer = null;
   function schedulePersist() {
@@ -256,77 +318,44 @@ export function createView({ label, getItem, getColor, viewKey }) {
     persistTimer = setTimeout(() => persist(), 200);
   }
 
-  function applyPlacement(saved) {
-    design.x = saved.x ?? 0.5;
-    design.y = saved.y ?? 0.36;
-    design.scale = saved.scale ?? 1;
-    design.rotation = saved.rotation ?? 0;
-    design.colorize = saved.colorize ?? 'original';
-    design.blendMode = saved.blendMode ?? 'source-over';
-    design.cropMode = saved.cropMode ?? 'none';
-  }
-
-  async function loadForCurrentItem() {
-    const newItemId = getItem().id;
-    if (newItemId === currentItemId) {
-      redraw();
-      return;
-    }
-    // Save current placement under the previous item before switching.
-    if (design.dataUrl) persist(currentItemId);
-    currentItemId = newItemId;
-
-    const saved = getLast(viewKey, newItemId);
-    if (saved && (saved.dataUrl || saved.kind === 'text')) {
-      if (saved.kind === 'text') {
-        await enterTextMode(saved);
-      } else if (design.dataUrl === saved.dataUrl && design.image && design.kind === 'image') {
-        applyPlacement(saved);
-        buildColorize();
-        buildBlend();
-        syncCrop();
-        redraw();
-      } else {
-        try {
-          const img = await loadImageFromDataUrl(saved.dataUrl);
-          setDesign(img, saved.dataUrl, saved.filename, saved);
-        } catch {
-          redraw();
-        }
-      }
-    } else if (design.image) {
-      // No saved state for the new item — keep the design but reset placement
-      // to defaults relative to the new item's design area.
-      applyDesignArea();
-      design.scale = 1;
-      design.rotation = 0;
-      persist();
-      redraw();
+  async function loadImageSlot(image, dataUrl, filename, placement = null) {
+    const s = slots.image;
+    s.image = image;
+    s.dataUrl = dataUrl;
+    s.filename = filename;
+    if (placement) {
+      applyPlacement(s, placement);
     } else {
-      redraw();
+      applyDesignAreaTo(s);
+      s.scale = 1;
+      s.rotation = 0;
+      s.colorize = 'original';
+      s.blendMode = 'source-over';
+      s.cropMode = 'none';
     }
+    activeKind = 'image';
+    pushRecent({ dataUrl, filename, ts: Date.now() });
+    persist();
+    notifyRecent();
+    updateControls();
+    redraw();
   }
 
-  function showImageControls() {
-    typeBtn.classList.remove('active');
-    textInput.hidden = true;
-    fontSelect.hidden = true;
-    sizeSlider.hidden = true;
-    textColorInput.hidden = true;
-  }
-  function showTextControls() {
-    typeBtn.classList.add('active');
-    textInput.hidden = false;
-    fontSelect.hidden = false;
-    sizeSlider.hidden = false;
-    textColorInput.hidden = false;
+  function clearImageSlot() {
+    slots.image = defaultImageSlot();
+    fileInput.value = '';
+    if (activeKind === 'image') activeKind = has(slots.text) ? 'text' : null;
+    persist();
+    updateControls();
+    renderRecent();
+    redraw();
   }
 
-  async function renderTextDesign() {
-    const fontDef = FONTS.find(f => f.id === design.fontId) || FONTS[0];
-    const text = design.text || ' ';
-    const fontSize = design.fontSize || DEFAULT_FONT_SIZE;
-    const textColor = design.textColor || '#000000';
+  async function renderTextSlot(slot) {
+    const fontDef = FONTS.find(f => f.id === slot.fontId) || FONTS[0];
+    const text = slot.text || ' ';
+    const fontSize = slot.fontSize || DEFAULT_FONT_SIZE;
+    const textColor = slot.textColor || '#000000';
     const fontSpec = `${fontDef.weight} ${fontSize}px "${fontDef.family}"`;
 
     if (document.fonts && document.fonts.load) {
@@ -353,113 +382,113 @@ export function createView({ label, getItem, getColor, viewKey }) {
 
     const dataUrl = c.toDataURL('image/png');
     const img = await loadImageFromDataUrl(dataUrl);
-    design.image = img;
-    design.dataUrl = dataUrl;
-    design.filename = `text-${slugifyForFilename(text) || 'design'}.png`;
-  }
-
-  function slugifyForFilename(s) {
-    return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+    slot.image = img;
+    slot.dataUrl = dataUrl;
+    slot.filename = `text-${slugifyForFilename(text) || 'design'}.png`;
   }
 
   async function enterTextMode(initial = null) {
-    design.kind = 'text';
-    design.text = initial?.text ?? (design.text || DEFAULT_TEXT);
-    design.fontId = initial?.fontId ?? (design.fontId || DEFAULT_FONT_ID);
-    design.fontSize = initial?.fontSize ?? (design.fontSize || DEFAULT_FONT_SIZE);
-    design.textColor = initial?.textColor ?? (design.textColor || '#000000');
+    const slot = slots.text;
+    slot.text = initial?.text ?? slot.text ?? DEFAULT_TEXT;
+    slot.fontId = initial?.fontId ?? slot.fontId ?? DEFAULT_FONT_ID;
+    slot.fontSize = initial?.fontSize ?? slot.fontSize ?? DEFAULT_FONT_SIZE;
+    slot.textColor = initial?.textColor ?? slot.textColor ?? '#000000';
     if (initial) {
-      applyPlacement(initial);
+      applyPlacement(slot, initial);
     } else {
-      applyDesignArea();
-      design.scale = 1;
-      design.rotation = 0;
-      design.colorize = 'original';
-      design.blendMode = 'source-over';
-      design.cropMode = 'none';
+      applyDesignAreaTo(slot);
+      slot.scale = 1;
+      slot.rotation = 0;
+      slot.colorize = 'original';
+      slot.blendMode = 'source-over';
+      slot.cropMode = 'none';
     }
-    textInput.value = design.text;
-    fontSelect.value = design.fontId;
-    sizeSlider.value = String(design.fontSize);
-    textColorInput.value = design.textColor;
-    await renderTextDesign();
-    selected = true;
-    clearBtn.hidden = false;
-    resetBtn.hidden = false;
-    cropBtn.hidden = false;
-    colorizeEl.hidden = false;
-    blendEl.hidden = false;
-    showTextControls();
-    buildColorize();
-    buildBlend();
-    syncCrop();
-    schedulePersist();
+    textInput.value = slot.text;
+    fontSelect.value = slot.fontId;
+    sizeSlider.value = String(slot.fontSize);
+    textColorInput.value = slot.textColor;
+    await renderTextSlot(slot);
+    activeKind = 'text';
+    persist();
+    updateControls();
     redraw();
   }
 
+  function clearTextSlot() {
+    slots.text = defaultTextSlot();
+    if (activeKind === 'text') activeKind = has(slots.image) ? 'image' : null;
+    persist();
+    updateControls();
+    redraw();
+  }
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const { image, dataUrl } = await loadImageFromFile(file);
+    loadImageSlot(image, dataUrl, file.name);
+  });
+
   typeBtn.addEventListener('click', () => {
-    if (design.kind === 'text') {
-      // toggling off ends text mode by clearing the design entirely.
-      clearBtn.click();
+    if (has(slots.text)) {
+      if (activeKind === 'text') clearTextSlot();
+      else { activeKind = 'text'; updateControls(); redraw(); }
       return;
     }
     enterTextMode();
   });
   textInput.addEventListener('input', async () => {
-    design.text = textInput.value;
-    await renderTextDesign();
+    const slot = slots.text;
+    slot.text = textInput.value;
+    await renderTextSlot(slot);
     schedulePersist();
     redraw();
   });
   fontSelect.addEventListener('change', async () => {
-    design.fontId = fontSelect.value;
-    await renderTextDesign();
+    const slot = slots.text;
+    slot.fontId = fontSelect.value;
+    await renderTextSlot(slot);
     schedulePersist();
     redraw();
   });
   sizeSlider.addEventListener('input', async () => {
-    design.fontSize = parseInt(sizeSlider.value, 10) || DEFAULT_FONT_SIZE;
-    await renderTextDesign();
+    const slot = slots.text;
+    slot.fontSize = parseInt(sizeSlider.value, 10) || DEFAULT_FONT_SIZE;
+    await renderTextSlot(slot);
     schedulePersist();
     redraw();
   });
   textColorInput.addEventListener('input', async () => {
-    design.textColor = textColorInput.value;
-    await renderTextDesign();
+    const slot = slots.text;
+    slot.textColor = textColorInput.value;
+    await renderTextSlot(slot);
     schedulePersist();
     redraw();
   });
 
-  function setDesign(image, dataUrl, filename, placement = null) {
-    design.kind = 'image';
-    design.image = image;
-    design.dataUrl = dataUrl;
-    design.filename = filename;
-    if (placement) {
-      applyPlacement(placement);
-    } else {
-      applyDesignArea();
-      design.scale = 1;
-      design.rotation = 0;
-      design.colorize = 'original';
-      design.blendMode = 'source-over';
-      design.cropMode = 'none';
+  clearBtn.addEventListener('click', () => {
+    if (activeKind === 'text') clearTextSlot();
+    else if (activeKind === 'image') clearImageSlot();
+    else {
+      slots = { image: defaultImageSlot(), text: defaultTextSlot() };
+      activeKind = null;
+      fileInput.value = '';
+      persist();
+      updateControls();
+      renderRecent();
+      redraw();
     }
-    selected = true;
-    clearBtn.hidden = false;
-    resetBtn.hidden = false;
-    cropBtn.hidden = false;
-    colorizeEl.hidden = false;
-    blendEl.hidden = false;
-    showImageControls();
-    buildColorize();
-    buildBlend();
-    syncCrop();
-    pushRecent({ dataUrl, filename, ts: Date.now() });
-    persist();
-    notifyRecent();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    const a = activeSlot();
+    if (!a) return;
+    applyDesignAreaTo(a);
+    a.scale = 1;
+    a.rotation = 0;
+    schedulePersist();
     redraw();
-  }
+  });
 
   function renderRecent() {
     recentEl.innerHTML = '';
@@ -474,11 +503,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.className = 'recent-item';
       b.style.backgroundImage = `url("${entry.dataUrl}")`;
       b.title = entry.filename;
-      b.classList.toggle('active', design.dataUrl === entry.dataUrl);
+      b.classList.toggle('active', slots.image.dataUrl === entry.dataUrl);
       b.addEventListener('click', async () => {
         try {
           const img = await loadImageFromDataUrl(entry.dataUrl);
-          setDesign(img, entry.dataUrl, entry.filename);
+          await loadImageSlot(img, entry.dataUrl, entry.filename);
         } catch (e) {
           console.warn('failed to load recent design:', e);
         }
@@ -489,36 +518,36 @@ export function createView({ label, getItem, getColor, viewKey }) {
   subscribeRecent(renderRecent);
   renderRecent();
 
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
-    const { image, dataUrl } = await loadImageFromFile(file);
-    setDesign(image, dataUrl, file.name);
-  });
+  // Hit testing — checks active slot's handles, then both slots' bodies (text on top).
+  function modeAtPoint(x, y) {
+    const a = activeSlot();
+    if (a) {
+      const h = getDesignHandles(a, currentDesignArea(), CANVAS_W, CANVAS_H);
+      const near = (p) => Math.hypot(x - p.x, y - p.y) < HANDLE_HIT;
+      if (near(h.rot)) return { kind: activeKind, mode: 'rotate' };
+      if (near(h.tl)) return { kind: activeKind, mode: 'scale-tl' };
+      if (near(h.tr)) return { kind: activeKind, mode: 'scale-tr' };
+      if (near(h.br)) return { kind: activeKind, mode: 'scale-br' };
+      if (near(h.bl)) return { kind: activeKind, mode: 'scale-bl' };
+    }
+    if (has(slots.text) && pointInDesign(x, y, slots.text, currentDesignArea(), CANVAS_W, CANVAS_H)) {
+      return { kind: 'text', mode: 'translate' };
+    }
+    if (has(slots.image) && pointInDesign(x, y, slots.image, currentDesignArea(), CANVAS_W, CANVAS_H)) {
+      return { kind: 'image', mode: 'translate' };
+    }
+    return null;
+  }
 
-  clearBtn.addEventListener('click', () => {
-    design = defaultDesign();
-    fileInput.value = '';
-    clearBtn.hidden = true;
-    resetBtn.hidden = true;
-    cropBtn.hidden = true;
-    colorizeEl.hidden = true;
-    blendEl.hidden = true;
-    showImageControls();
-    selected = false;
-    setLast(viewKey, currentItemId, null);
-    renderRecent();
-    redraw();
-  });
-
-  resetBtn.addEventListener('click', () => {
-    applyDesignArea();
-    design.scale = 1;
-    design.rotation = 0;
-    selected = true;
-    schedulePersist();
-    redraw();
-  });
+  function cursorForMode(result, dragging) {
+    if (!result) return '';
+    const mode = result.mode;
+    if (mode === 'translate') return dragging ? 'grabbing' : 'move';
+    if (mode === 'rotate') return dragging ? 'grabbing' : 'grab';
+    if (mode === 'scale-tl' || mode === 'scale-br') return 'nwse-resize';
+    if (mode === 'scale-tr' || mode === 'scale-bl') return 'nesw-resize';
+    return '';
+  }
 
   let drag = null;
   function toCanvasCoords(evt) {
@@ -531,62 +560,40 @@ export function createView({ label, getItem, getColor, viewKey }) {
     };
   }
 
-  function modeAtPoint(x, y) {
-    if (!design.image) return null;
-    const h = getDesignHandles(design, currentDesignArea(), CANVAS_W, CANVAS_H);
-    const near = (p) => Math.hypot(x - p.x, y - p.y) < HANDLE_HIT;
-    if (selected && near(h.rot)) return 'rotate';
-    if (selected && near(h.tl)) return 'scale-tl';
-    if (selected && near(h.tr)) return 'scale-tr';
-    if (selected && near(h.br)) return 'scale-br';
-    if (selected && near(h.bl)) return 'scale-bl';
-    if (pointInDesign(x, y, design, currentDesignArea(), CANVAS_W, CANVAS_H)) return 'translate';
-    return null;
-  }
-
-  function cursorForMode(mode, dragging) {
-    if (!mode) return '';
-    if (mode === 'translate') return dragging ? 'grabbing' : 'move';
-    if (mode === 'rotate') return dragging ? 'grabbing' : 'grab';
-    if (mode === 'scale-tl' || mode === 'scale-br') return 'nwse-resize';
-    if (mode === 'scale-tr' || mode === 'scale-bl') return 'nesw-resize';
-    return '';
-  }
-
   canvas.addEventListener('pointerdown', (e) => {
-    if (!design.image) return;
     const { x, y } = toCanvasCoords(e);
-    const h = getDesignHandles(design, currentDesignArea(), CANVAS_W, CANVAS_H);
-    const mode = modeAtPoint(x, y);
+    const result = modeAtPoint(x, y);
 
-    if (!mode) {
-      if (selected) {
-        selected = false;
+    if (!result) {
+      if (activeKind) {
+        activeKind = null;
+        updateControls();
         redraw();
       }
       return;
     }
 
-    if (!selected) {
-      selected = true;
+    if (activeKind !== result.kind) {
+      activeKind = result.kind;
+      updateControls();
       redraw();
     }
 
+    const slot = slots[result.kind];
+    const h = getDesignHandles(slot, currentDesignArea(), CANVAS_W, CANVAS_H);
     drag = {
-      mode,
+      kind: result.kind,
+      mode: result.mode,
       centerX: h.center.x, centerY: h.center.y,
       startX: x, startY: y,
-      startScale: design.scale,
-      startRotation: design.rotation || 0,
+      startScale: slot.scale,
+      startRotation: slot.rotation || 0,
       startAngle: Math.atan2(y - h.center.y, x - h.center.x),
-      cornerDist: 0,
-      cornerDirX: 0,
-      cornerDirY: 0,
-      clickOffsetX: 0,
-      clickOffsetY: 0,
+      cornerDist: 0, cornerDirX: 0, cornerDirY: 0,
+      clickOffsetX: 0, clickOffsetY: 0,
     };
-    if (mode.startsWith('scale-')) {
-      const c = h[mode.slice('scale-'.length)];
+    if (result.mode.startsWith('scale-')) {
+      const c = h[result.mode.slice('scale-'.length)];
       const dx = c.x - h.center.x;
       const dy = c.y - h.center.y;
       drag.cornerDist = Math.max(1, Math.hypot(dx, dy));
@@ -595,7 +602,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       drag.clickOffsetX = x - c.x;
       drag.clickOffsetY = y - c.y;
     }
-    canvas.style.cursor = cursorForMode(mode, true);
+    canvas.style.cursor = cursorForMode(result, true);
     canvas.setPointerCapture(e.pointerId);
     e.preventDefault();
   });
@@ -606,18 +613,19 @@ export function createView({ label, getItem, getColor, viewKey }) {
       canvas.style.cursor = cursorForMode(modeAtPoint(x, y), false);
       return;
     }
+    const slot = slots[drag.kind];
     if (drag.mode === 'translate') {
-      design.x = (drag.centerX + (x - drag.startX)) / CANVAS_W;
-      design.y = (drag.centerY + (y - drag.startY)) / CANVAS_H;
+      slot.x = (drag.centerX + (x - drag.startX)) / CANVAS_W;
+      slot.y = (drag.centerY + (y - drag.startY)) / CANVAS_H;
     } else if (drag.mode === 'rotate') {
       const angle = Math.atan2(y - drag.centerY, x - drag.centerX);
-      design.rotation = drag.startRotation + (angle - drag.startAngle);
+      slot.rotation = drag.startRotation + (angle - drag.startAngle);
     } else if (drag.mode.startsWith('scale-')) {
       const vx = x - drag.clickOffsetX - drag.centerX;
       const vy = y - drag.clickOffsetY - drag.centerY;
       const proj = vx * drag.cornerDirX + vy * drag.cornerDirY;
       const s = drag.startScale * (proj / drag.cornerDist);
-      design.scale = Math.max(0.05, Math.min(5, s));
+      slot.scale = Math.max(0.05, Math.min(5, s));
     }
     redraw();
   });
@@ -637,41 +645,110 @@ export function createView({ label, getItem, getColor, viewKey }) {
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
+  // Restore from persisted state. Handles legacy single-slot format too.
+  async function restoreFromSaved(saved) {
+    if (!saved) return;
+    const isLegacy = saved.kind === 'image' || saved.kind === 'text' || (saved.dataUrl && !saved.image && !saved.text);
+    if (isLegacy) {
+      if (saved.kind === 'text') return enterTextMode(saved);
+      try {
+        const img = await loadImageFromDataUrl(saved.dataUrl);
+        await loadImageSlot(img, saved.dataUrl, saved.filename, saved);
+      } catch {}
+      return;
+    }
+    if (saved.image && saved.image.dataUrl) {
+      try {
+        const img = await loadImageFromDataUrl(saved.image.dataUrl);
+        const s = slots.image;
+        s.image = img;
+        s.dataUrl = saved.image.dataUrl;
+        s.filename = saved.image.filename;
+        applyPlacement(s, saved.image);
+      } catch (e) {
+        console.warn('image restore failed:', e);
+      }
+    }
+    if (saved.text) {
+      const t = slots.text;
+      t.text = saved.text.text ?? DEFAULT_TEXT;
+      t.fontId = saved.text.fontId ?? DEFAULT_FONT_ID;
+      t.fontSize = saved.text.fontSize ?? DEFAULT_FONT_SIZE;
+      t.textColor = saved.text.textColor ?? '#000000';
+      applyPlacement(t, saved.text);
+      textInput.value = t.text;
+      fontSelect.value = t.fontId;
+      sizeSlider.value = String(t.fontSize);
+      textColorInput.value = t.textColor;
+      await renderTextSlot(t);
+    }
+    if (saved.active && has(slots[saved.active])) activeKind = saved.active;
+    else if (has(slots.image)) activeKind = 'image';
+    else if (has(slots.text)) activeKind = 'text';
+    updateControls();
+    redraw();
+  }
+
   redraw();
 
-  // Restore last-used design for this (view, item), if any.
   const last = getLast(viewKey, currentItemId);
   if (last) {
-    if (last.kind === 'text') {
-      enterTextMode(last).catch(() => setLast(viewKey, currentItemId, null));
-    } else if (last.dataUrl) {
-      loadImageFromDataUrl(last.dataUrl)
-        .then((img) => setDesign(img, last.dataUrl, last.filename, last))
-        .catch(() => setLast(viewKey, currentItemId, null));
+    restoreFromSaved(last).catch(() => setLast(viewKey, currentItemId, null));
+  }
+
+  async function loadForCurrentItem() {
+    const newItemId = getItem().id;
+    if (newItemId === currentItemId) {
+      redraw();
+      return;
+    }
+    if (anyContent()) persist(currentItemId);
+    currentItemId = newItemId;
+
+    slots = { image: defaultImageSlot(), text: defaultTextSlot() };
+    activeKind = null;
+    const saved = getLast(viewKey, newItemId);
+    if (saved) {
+      await restoreFromSaved(saved);
+    } else {
+      updateControls();
+      redraw();
     }
   }
 
   async function setGlobalColor(hex) {
-    if (!design.image) return;
-    design.colorize = hex;
-    if (design.kind === 'text') {
-      design.textColor = hex;
-      textColorInput.value = hex;
-      await renderTextDesign();
+    let touched = false;
+    for (const k of ['image', 'text']) {
+      const s = slots[k];
+      if (!s.image) continue;
+      s.colorize = hex;
+      if (s.kind === 'text') {
+        s.textColor = hex;
+        if (k === 'text') textColorInput.value = hex;
+        await renderTextSlot(s);
+      }
+      touched = true;
     }
-    if (!colorizeEl.hidden) buildColorize();
+    if (!touched) return;
+    if (activeSlot()) buildColorize();
     schedulePersist();
     redraw();
   }
   async function clearGlobalColor() {
-    if (!design.image) return;
-    design.colorize = 'original';
-    if (design.kind === 'text') {
-      design.textColor = '#000000';
-      textColorInput.value = '#000000';
-      await renderTextDesign();
+    let touched = false;
+    for (const k of ['image', 'text']) {
+      const s = slots[k];
+      if (!s.image) continue;
+      s.colorize = 'original';
+      if (s.kind === 'text') {
+        s.textColor = '#000000';
+        if (k === 'text') textColorInput.value = '#000000';
+        await renderTextSlot(s);
+      }
+      touched = true;
     }
-    if (!colorizeEl.hidden) buildColorize();
+    if (!touched) return;
+    if (activeSlot()) buildColorize();
     schedulePersist();
     redraw();
   }
@@ -682,8 +759,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
     loadForCurrentItem,
     setGlobalColor,
     clearGlobalColor,
-    getDesign: () => design,
-    getHandlesVisible: () => selected,
-    setHandlesVisible: (v) => { selected = !!v; },
+    getDesigns: () => ({
+      image: has(slots.image) ? slots.image : null,
+      text:  has(slots.text)  ? slots.text  : null,
+    }),
+    getHandlesVisible: () => activeKind != null,
+    setHandlesVisible: (v) => {
+      if (!v) { savedActiveKind = activeKind; activeKind = null; }
+      else if (savedActiveKind) { activeKind = savedActiveKind; savedActiveKind = null; }
+    },
   };
 }

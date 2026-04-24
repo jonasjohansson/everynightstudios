@@ -63,7 +63,11 @@ function colorizedImage(img, mode) {
   return c;
 }
 
-export async function renderView(canvas, { photoSrc, tintLayers, tintHex, design, designArea, showHandles }) {
+export async function renderView(canvas, { photoSrc, tintLayers, tintHex, designs, design, designArea, activeDesign, showHandles }) {
+  // Back-compat: single `design` arg becomes a one-element list.
+  if (!designs && design) designs = [design];
+  if (!designs) designs = [];
+  if (!activeDesign && design && showHandles) activeDesign = design;
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
   const ctx = canvas.getContext('2d');
@@ -96,9 +100,11 @@ export async function renderView(canvas, { photoSrc, tintLayers, tintHex, design
     drawMissing(ctx);
   }
 
-  if (design && design.image) {
-    drawDesign(ctx, design, designArea, canvas.width, canvas.height);
-    if (showHandles) drawHandles(ctx, design, designArea, canvas.width, canvas.height);
+  for (const d of designs) {
+    if (d && d.image) drawDesign(ctx, d, designArea, canvas.width, canvas.height);
+  }
+  if (activeDesign && activeDesign.image) {
+    drawHandles(ctx, activeDesign, designArea, canvas.width, canvas.height);
   }
 }
 

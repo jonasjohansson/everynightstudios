@@ -65,16 +65,16 @@ export async function exportZip({ item, color, front, back }) {
   zip.file(`${base}-front.png`, frontBlob);
   zip.file(`${base}-back.png`, backBlob);
 
-  const fd = front.getDesign();
-  const bd = back.getDesign();
+  const frontDesigns = front.getDesigns();
+  const backDesigns = back.getDesigns();
 
-  if (fd?.dataUrl) {
-    const { name, ext } = splitFilename(fd.filename);
-    zip.file(`${base}-design-front-${slugify(name)}.${ext}`, dataUrlToBlob(fd.dataUrl));
-  }
-  if (bd?.dataUrl) {
-    const { name, ext } = splitFilename(bd.filename);
-    zip.file(`${base}-design-back-${slugify(name)}.${ext}`, dataUrlToBlob(bd.dataUrl));
+  for (const [side, designs] of [['front', frontDesigns], ['back', backDesigns]]) {
+    for (const kind of ['image', 'text']) {
+      const d = designs?.[kind];
+      if (!d?.dataUrl) continue;
+      const { name, ext } = splitFilename(d.filename);
+      zip.file(`${base}-design-${side}-${kind}-${slugify(name)}.${ext}`, dataUrlToBlob(d.dataUrl));
+    }
   }
 
   const out = await zip.generateAsync({ type: 'blob' });
