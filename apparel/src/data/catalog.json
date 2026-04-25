@@ -47,7 +47,7 @@
       { "id": "charcoal",       "name": "Charcoal",       "hex": "#4b4b4d" },
       { "id": "dark-heather",   "name": "Dark Heather",   "hex": "#3e434a" },
       { "id": "sport-grey",     "name": "Sport Grey",     "hex": "#acacaa" },
-      { "id": "ash-grey",       "name": "Ash Grey",       "hex": "#d6d6d3", "front": "public/garments/gildan-i2400/front-ash-grey.jpg", "back": "public/garments/gildan-i2400/back-ash-grey.jpg" },
+      { "id": "ash-grey",       "name": "Ash Grey",       "hex": "#d6d6d3", "front": "public/garments/gildan-i2400/front-ash-grey.png", "back": "public/garments/gildan-i2400/back-ash-grey.png" },
       { "id": "navy",           "name": "Navy",           "hex": "#1a2537" },
       { "id": "royal",          "name": "Royal",          "hex": "#2b5cab" },
       { "id": "carolina-blue",  "name": "Carolina Blue",  "hex": "#7ca1cf" },
