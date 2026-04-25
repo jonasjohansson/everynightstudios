@@ -94,10 +94,13 @@ body.bar-open .settings-toggle { background: var(--fg); color: var(--panel); bor
   text-transform: uppercase;
 }
 
-/* Topbar form controls */
+/* Form controls — shared by .topbar and .view .controls (apparel). */
 .topbar input[type="text"],
 .topbar input[type="number"],
-.topbar select {
+.topbar select,
+.view .controls input[type="text"],
+.view .controls input[type="number"],
+.view .controls select {
   font: inherit;
   font-size: 12px;
   height: var(--ctrl-h);
@@ -109,12 +112,14 @@ body.bar-open .settings-toggle { background: var(--fg); color: var(--panel); bor
   text-transform: none;
   letter-spacing: 0;
 }
-.topbar input[type="range"] {
+.topbar input[type="range"],
+.view .controls input[type="range"] {
   accent-color: var(--fg);
   width: 120px;
   height: var(--ctrl-h);
 }
-.topbar input[type="color"] {
+.topbar input[type="color"],
+.view .controls input[type="color"] {
   width: var(--ctrl-h);
   height: var(--ctrl-h);
   padding: 0;
@@ -123,11 +128,16 @@ body.bar-open .settings-toggle { background: var(--fg); color: var(--panel); bor
   background: var(--panel);
   border-radius: var(--radius);
 }
-.topbar input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-.topbar input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0; }
-.topbar input[type="color"]::-moz-color-swatch { border: none; border-radius: 0; }
+.topbar input[type="color"]::-webkit-color-swatch-wrapper,
+.view .controls input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.topbar input[type="color"]::-webkit-color-swatch,
+.view .controls input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0; }
+.topbar input[type="color"]::-moz-color-swatch,
+.view .controls input[type="color"]::-moz-color-swatch { border: none; border-radius: 0; }
 .topbar button,
-.topbar .file-label {
+.topbar .file-label,
+.view .controls button,
+.view .controls .file-label {
   font: inherit;
   font-size: 12px;
   height: var(--ctrl-h);
@@ -141,7 +151,11 @@ body.bar-open .settings-toggle { background: var(--fg); color: var(--panel); bor
   border-radius: var(--radius);
 }
 .topbar button:hover,
-.topbar .file-label:hover { background: var(--hover); }
+.topbar .file-label:hover,
+.view .controls button:hover,
+.view .controls .file-label:hover { background: var(--hover); }
+.view .controls button.active { background: var(--fg); color: var(--panel); border-color: var(--fg); }
+.view .controls button.active:hover { background: var(--fg); }
 .topbar label { height: var(--ctrl-h); }
 
 /* Mono caption — tiny uppercase label used above panels, on overlays, etc. */

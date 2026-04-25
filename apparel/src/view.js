@@ -75,7 +75,6 @@ export function createView({ label, getItem, getColor, viewKey }) {
   const el = document.createElement('section');
   el.className = 'view';
   el.innerHTML = `
-    <div class="label">${label}</div>
     <div class="canvas-wrap"><canvas></canvas></div>
     <aside class="layers-panel" hidden></aside>
     <div class="size-popover" hidden>

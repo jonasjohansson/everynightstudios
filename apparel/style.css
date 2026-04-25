@@ -1,6 +1,6 @@
 body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-/* Brand / style / source — floats out from the cog when settings is open. */
+/* Brand / style — floats next to the cog when settings is open. */
 #bar.topbar {
   position: fixed;
   top: 8px;
@@ -16,16 +16,6 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   flex-wrap: nowrap;
 }
 body:not(.bar-open) #bar.topbar { display: none !important; }
-
-#bar a.source {
-  font-size: 11px;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-left: 4px;
-}
-#bar a.source:hover { color: var(--fg); }
 
 /* Side-by-side front / back grid */
 main#views {
@@ -47,7 +37,6 @@ main#views {
   overflow: hidden;
 }
 .view:last-child { border-right: none; }
-.view .label { display: none; }
 .view .canvas-wrap {
   position: absolute;
   inset: 0;
@@ -140,9 +129,7 @@ body:not(.bar-open) .view .layers-panel { display: none !important; }
   text-transform: none;
 }
 
-/* When the settings cog is off, hide all chrome — only canvas + cog +
-   left color rail are visible. */
-body:not(.bar-open) .view .label,
+/* When the settings cog is off, hide all chrome — only canvas + cog visible. */
 body:not(.bar-open) .view .controls,
 body:not(.bar-open) .view .size-popover { display: none !important; }
 
@@ -216,55 +203,8 @@ body:not(.bar-open) #color-rail { display: none !important; }
   color: var(--muted);
 }
 .view .controls label { display: flex; gap: 8px; align-items: center; }
-.view .controls button,
-.view .controls .file-label {
-  font: inherit;
-  font-size: 12px;
-  height: var(--ctrl-h);
-  padding: 0 10px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--fg);
-  cursor: pointer;
-  border-radius: var(--radius);
-}
-.view .controls button:hover,
-.view .controls .file-label:hover { background: var(--hover); }
-.view .controls button.active { background: var(--fg); color: var(--panel); border-color: var(--fg); }
-.view .controls button.active:hover { background: var(--fg); }
-
-/* Text-mode controls — text input, font select, size slider, text color */
-.view .controls input[type="text"],
-.view .controls select {
-  font: inherit;
-  font-size: 12px;
-  height: var(--ctrl-h);
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--fg);
-  border-radius: var(--radius);
-}
 .view .controls input.text-input { min-width: 140px; }
-.view .controls input[type="range"] {
-  width: 100px;
-  height: var(--ctrl-h);
-  accent-color: var(--fg);
-}
-.view .controls input[type="color"] {
-  width: var(--ctrl-h);
-  height: var(--ctrl-h);
-  padding: 0;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  background: var(--panel);
-  border-radius: var(--radius);
-}
-.view .controls input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-.view .controls input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0; }
-.view .controls input[type="color"]::-moz-color-swatch { border: none; border-radius: 0; }
+.view .controls input[type="range"] { width: 100px; }
 
 /* Recent designs — thumbnails for quick re-pick */
 .view .controls .recent {
