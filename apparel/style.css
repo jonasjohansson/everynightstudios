@@ -53,7 +53,11 @@ main#views {
   background: var(--bg);
   transform-origin: 0 0;
 }
-.view.zoomed canvas { cursor: grab; }
+.view.zoomed canvas {
+  cursor: grab;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
 .view.zoomed canvas:active { cursor: grabbing; }
 
 /* Per-view controls row — buttons, file-label, colorize, blend */

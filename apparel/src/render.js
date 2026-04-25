@@ -13,6 +13,58 @@ function loadImage(src) {
   return p;
 }
 
+// Crop transparent margins so photos with empty surroundings fill the canvas.
+// No-op for opaque images (corners all opaque) or if reading pixels fails.
+const trimCache = new Map();
+function trimToContent(img, src) {
+  if (trimCache.has(src)) return trimCache.get(src);
+  const w = img.naturalWidth || img.width || 0;
+  const h = img.naturalHeight || img.height || 0;
+  if (!w || !h) { trimCache.set(src, img); return img; }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  let data;
+  try { data = ctx.getImageData(0, 0, w, h); }
+  catch { trimCache.set(src, img); return img; }
+  const px = data.data;
+  // If all four corners are opaque, assume the photo has no alpha border to trim.
+  const corners = [
+    px[3],
+    px[(w - 1) * 4 + 3],
+    px[(h - 1) * w * 4 + 3],
+    px[((h - 1) * w + (w - 1)) * 4 + 3],
+  ];
+  if (corners.every(a => a > 200)) { trimCache.set(src, img); return img; }
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  for (let y = 0; y < h; y++) {
+    const row = y * w * 4;
+    for (let x = 0; x < w; x++) {
+      if (px[row + x * 4 + 3] > 20) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < minX || maxY < minY) { trimCache.set(src, img); return img; }
+  const margin = Math.max(2, Math.round(Math.min(w, h) * 0.01));
+  minX = Math.max(0, minX - margin);
+  minY = Math.max(0, minY - margin);
+  maxX = Math.min(w - 1, maxX + margin);
+  maxY = Math.min(h - 1, maxY + margin);
+  const tw = maxX - minX + 1;
+  const th = maxY - minY + 1;
+  if (tw === w && th === h) { trimCache.set(src, img); return img; }
+  const out = document.createElement('canvas');
+  out.width = tw; out.height = th;
+  out.getContext('2d').drawImage(c, minX, minY, tw, th, 0, 0, tw, th);
+  trimCache.set(src, out);
+  return out;
+}
+
 const COLORIZE_FALLBACK = 1024;
 function intrinsicSize(img) {
   const w = img.naturalWidth || img.width || COLORIZE_FALLBACK;
@@ -78,7 +130,8 @@ export async function renderView(canvas, { photoSrc, tintLayers, tintHex, design
 
   if (photoSrc) {
     try {
-      await drawFitted(ctx, await loadImage(photoSrc));
+      const raw = await loadImage(photoSrc);
+      await drawFitted(ctx, trimToContent(raw, photoSrc));
     } catch (e) {
       console.warn('garment photo failed:', e);
       drawMissing(ctx);
@@ -192,6 +245,8 @@ function drawDesign(ctx, design, area, W, H) {
     ctx.clip();
   }
   if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
+  // Text rasterizes a glyph bitmap; bilinear resampling smudges pixel fonts.
+  if (design.kind === 'text') ctx.imageSmoothingEnabled = false;
   ctx.drawImage(src, -drawW / 2, -drawH / 2, drawW, drawH);
   ctx.restore();
 }

@@ -357,7 +357,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const text = slot.text || ' ';
     const fontSize = slot.fontSize || DEFAULT_FONT_SIZE;
     const textColor = slot.textColor || '#000000';
-    const fontSpec = `${fontDef.weight} ${fontSize}px "${fontDef.family}"`;
+    // Rasterize at 3× the requested font size so the source canvas has plenty
+    // of pixels for downstream scaling (canvas→canvas + CSS zoom).
+    const RASTER_SCALE = 3;
+    const rasterPx = Math.round(fontSize * RASTER_SCALE);
+    const fontSpec = `${fontDef.weight} ${rasterPx}px "${fontDef.family}"`;
 
     if (document.fonts && document.fonts.load) {
       try { await document.fonts.load(fontSpec, text); } catch {}
@@ -366,15 +370,16 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const measure = document.createElement('canvas').getContext('2d');
     measure.font = fontSpec;
     const m = measure.measureText(text);
-    const padX = Math.max(20, fontSize * 0.2);
-    const padY = Math.max(10, fontSize * 0.25);
+    const padX = Math.max(20, rasterPx * 0.2);
+    const padY = Math.max(10, rasterPx * 0.25);
     const w = Math.max(1, Math.ceil(m.width) + padX * 2);
-    const h = Math.max(1, Math.ceil(fontSize * 1.4) + padY * 2);
+    const h = Math.max(1, Math.ceil(rasterPx * 1.4) + padY * 2);
 
     const c = document.createElement('canvas');
     c.width = w;
     c.height = h;
     const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
     ctx.font = fontSpec;
     ctx.fillStyle = textColor;
     ctx.textBaseline = 'middle';
