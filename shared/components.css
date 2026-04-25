@@ -12,6 +12,15 @@
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   z-index: 10;
+  /* Lightweight: collapse to a thin strip until hovered or focused. */
+  max-height: 200px;
+  overflow: hidden;
+  transition: max-height 220ms ease, padding 220ms ease;
+}
+.topbar:not(:hover):not(:focus-within) {
+  max-height: 6px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .topbar .back { font-size: 13px; color: var(--muted); }
 .topbar .back:hover { color: var(--fg); }
