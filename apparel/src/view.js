@@ -124,18 +124,24 @@ export function createView({ label, getItem, getColor, viewKey }) {
     fontSelect.appendChild(opt);
   }
 
-  const defaultPlacement = () => ({
-    x: 0.5, y: 0.36, scale: 1, rotation: 0,
-    colorize: 'original', blendMode: 'source-over', cropMode: 'none',
-  });
+  const newPlacement = () => {
+    const area = currentDesignArea();
+    return {
+      x: area.x ?? 0.5,
+      y: area.y ?? 0.36,
+      widthCm: defaultWidthCm(area),
+      rotation: 0,
+      colorize: 'original', blendMode: 'source-over', cropMode: 'none',
+    };
+  };
   const newImageLayer = () => ({
-    kind: 'image', image: null, dataUrl: null, filename: null, ...defaultPlacement(),
+    kind: 'image', image: null, dataUrl: null, filename: null, ...newPlacement(),
   });
   const newTextLayer = () => ({
     kind: 'text', image: null, dataUrl: null, filename: null,
     text: DEFAULT_TEXT, fontId: DEFAULT_FONT_ID, fontSize: DEFAULT_FONT_SIZE, textColor: '#000000',
     fontFamily: 'OffBit', fontWeight: 400,
-    ...defaultPlacement(),
+    ...newPlacement(),
   });
 
   let layers = [];
@@ -148,7 +154,15 @@ export function createView({ label, getItem, getColor, viewKey }) {
   const active = () => activeIndex >= 0 ? layers[activeIndex] : null;
 
   function currentDesignArea() {
-    return getItem().design[viewKey];
+    const item = getItem();
+    return {
+      ...item.design[viewKey],
+      cmPerW: item.cmPerW || DEFAULT_CM_PER_W,
+    };
+  }
+  function defaultWidthCm(area) {
+    if (area.widthCm != null) return area.widthCm;
+    return (area.w ?? 0.25) * (area.cmPerW || DEFAULT_CM_PER_W);
   }
 
   function syncCanvasSize() {
@@ -187,9 +201,17 @@ export function createView({ label, getItem, getColor, viewKey }) {
     slot.y = area.y;
   }
   function applyPlacement(slot, saved) {
+    const area = currentDesignArea();
     slot.x = saved.x ?? slot.x;
     slot.y = saved.y ?? slot.y;
-    slot.scale = saved.scale ?? 1;
+    if (saved.widthCm != null) {
+      slot.widthCm = saved.widthCm;
+    } else if (saved.scale != null) {
+      // Legacy migration: scale was a multiplier on area.w in canvas-fraction terms.
+      slot.widthCm = saved.scale * defaultWidthCm(area);
+    } else {
+      slot.widthCm = defaultWidthCm(area);
+    }
     slot.rotation = saved.rotation ?? 0;
     slot.colorize = saved.colorize ?? 'original';
     slot.blendMode = saved.blendMode ?? 'source-over';
@@ -197,10 +219,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   }
 
   // ---------- size popover (cm width) -----------------------------------------
-  function cmPerW() { return getItem().cmPerW || DEFAULT_CM_PER_W; }
-  function designWidthCm(slot) {
-    return currentDesignArea().w * cmPerW() * slot.scale;
-  }
+  function designWidthCm(slot) { return slot.widthCm; }
   function updatePopover() {
     const a = active();
     if (!a) { popover.hidden = true; return; }
@@ -228,7 +247,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     if (!a) return;
     const v = parseFloat(widthCmInput.value);
     if (!v || !isFinite(v)) return;
-    a.scale = v / (currentDesignArea().w * cmPerW());
+    a.widthCm = v;
     schedulePersist();
     redraw();
   });
@@ -358,14 +377,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
       return {
         kind: 'text',
         text: l.text, fontId: l.fontId, fontSize: l.fontSize, textColor: l.textColor,
-        x: l.x, y: l.y, scale: l.scale, rotation: l.rotation,
+        x: l.x, y: l.y, widthCm: l.widthCm, rotation: l.rotation,
         colorize: l.colorize, blendMode: l.blendMode, cropMode: l.cropMode,
       };
     }
     return {
       kind: 'image',
       dataUrl: l.dataUrl, filename: l.filename,
-      x: l.x, y: l.y, scale: l.scale, rotation: l.rotation,
+      x: l.x, y: l.y, widthCm: l.widthCm, rotation: l.rotation,
       colorize: l.colorize, blendMode: l.blendMode, cropMode: l.cropMode,
     };
   }
@@ -537,8 +556,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
   resetBtn.addEventListener('click', () => {
     const a = active();
     if (!a) return;
-    applyDesignAreaTo(a);
-    a.scale = 1;
+    const area = currentDesignArea();
+    a.x = area.x;
+    a.y = area.y;
+    a.widthCm = defaultWidthCm(area);
     a.rotation = 0;
     schedulePersist();
     redraw();
@@ -717,7 +738,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       mode: result.mode,
       centerX: h.center.x, centerY: h.center.y,
       startX: x, startY: y,
-      startScale: slot.scale,
+      startWidthCm: slot.widthCm,
       startRotation: slot.rotation || 0,
       startAngle: Math.atan2(y - h.center.y, x - h.center.x),
       cornerDist: 0, cornerDirX: 0, cornerDirY: 0,
@@ -769,8 +790,8 @@ export function createView({ label, getItem, getColor, viewKey }) {
       const vx = x - drag.clickOffsetX - drag.centerX;
       const vy = y - drag.clickOffsetY - drag.centerY;
       const proj = vx * drag.cornerDirX + vy * drag.cornerDirY;
-      const s = drag.startScale * (proj / drag.cornerDist);
-      slot.scale = Math.max(0.05, Math.min(5, s));
+      const ratio = proj / drag.cornerDist;
+      slot.widthCm = Math.max(0.5, Math.min(200, drag.startWidthCm * ratio));
     }
     redraw();
   });

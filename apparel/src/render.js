@@ -227,7 +227,16 @@ function designMetrics(design, area, W, H, garment) {
   const baseY = garment?.dy ?? 0;
   const baseW = garment?.drawW ?? W;
   const baseH = garment?.drawH ?? H;
-  const drawW = Math.max(1, area.w * baseW * design.scale);
+  const cmPerW = area?.cmPerW || 50;
+  // Width in canvas px: widthCm / garment-real-cm * garment-px-on-canvas.
+  // Falls back to legacy area.w * scale when widthCm isn't set.
+  let drawW;
+  if (design.widthCm != null) {
+    drawW = (design.widthCm / cmPerW) * baseW;
+  } else {
+    drawW = (area.w ?? 0.25) * baseW * (design.scale ?? 1);
+  }
+  drawW = Math.max(1, drawW);
   let drawH;
   if (design.kind === 'text') {
     drawH = textMetrics(design, drawW).height;

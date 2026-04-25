@@ -6,9 +6,10 @@
     "name": "Creator 2.0 Long Sleeve",
     "kind": "longsleeve",
     "source": "https://stanleystella.com/en-eu/creator-2-0-long-sleeve-sttu199",
+    "cmPerW": 52,
     "design": {
-      "front": { "x": 0.5, "y": 0.38, "w": 0.22 },
-      "back":  { "x": 0.5, "y": 0.34, "w": 0.32 }
+      "front": { "x": 0.5, "y": 0.38, "w": 0.22, "widthCm": 11 },
+      "back":  { "x": 0.5, "y": 0.34, "w": 0.32, "widthCm": 24 }
     },
     "colors": [
       { "id": "c001", "name": "White",             "hex": "#f2efe6", "front": "public/garments/sttu199/front-c001.avif", "back": "public/garments/sttu199/back-c001.avif" },
@@ -32,13 +33,14 @@
     "name": "Ultra Cotton Long Sleeve",
     "kind": "longsleeve",
     "source": "https://gildan.se/en/gi2400-en-black",
+    "cmPerW": 55,
     "tintBase": {
       "front": { "overlay": "public/garments/gildan-i2400/tint-front.png" },
       "back":  { "overlay": "public/garments/gildan-i2400/tint-back.png"  }
     },
     "design": {
-      "front": { "x": 0.5, "y": 0.36, "w": 0.28 },
-      "back":  { "x": 0.5, "y": 0.34, "w": 0.42 }
+      "front": { "x": 0.5, "y": 0.36, "w": 0.28, "widthCm": 14 },
+      "back":  { "x": 0.5, "y": 0.34, "w": 0.42, "widthCm": 28 }
     },
     "notes": "S–3XL in all colors; S–5XL in Black, Charcoal, Dark Heather, Navy, Orange, Red, Royal, Safety Orange, Safety Green, Sport Grey, White. 205g/m² (200g/m² white). 100% cotton; Ash Grey 99/1, Sport Grey 90/10, Dark Heather / Safety Green / Safety Orange 50/50.",
     "colors": [
@@ -72,9 +74,10 @@
     "name": "Heavy Faded L/S Tee",
     "kind": "longsleeve",
     "source": "https://ascolour.eu/heavy-faded-l-s-tee-5083/",
+    "cmPerW": 58,
     "design": {
-      "front": { "x": 0.5, "y": 0.38, "w": 0.28 },
-      "back":  { "x": 0.5, "y": 0.34, "w": 0.38 }
+      "front": { "x": 0.5, "y": 0.38, "w": 0.28, "widthCm": 14 },
+      "back":  { "x": 0.5, "y": 0.34, "w": 0.38, "widthCm": 26 }
     },
     "notes": "100% carded cotton, 7.1oz, garment dyed & preshrunk. Boxy relaxed fit, dropped shoulders, cuffed sleeves.",
     "colors": [
