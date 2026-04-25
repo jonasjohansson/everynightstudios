@@ -1,6 +1,8 @@
 :root {
   --bg: #fafaf7;
   --panel: #fff;
+  --panel-overlay: rgba(255, 255, 255, 0.92);
+  --panel-overlay-strong: rgba(255, 255, 255, 0.95);
   --fg: #111;
   --muted: #888;
   --faint: #bbb;
@@ -9,6 +11,10 @@
   --hover: #f0f0eb;
   --accent: #111;
   --radius: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }

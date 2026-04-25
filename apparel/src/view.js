@@ -1,4 +1,3 @@
-import { CANVAS_W, CANVAS_H } from './garments.js';
 import { renderView, getDesignHandles, pointInDesign, loadImageFromFile } from './render.js';
 
 const HANDLE_HIT = 18;
@@ -154,7 +153,15 @@ export function createView({ label, getItem, getColor, viewKey }) {
     return getItem().design[viewKey];
   }
 
+  function syncCanvasSize() {
+    const w = Math.max(1, Math.round(canvasWrap.clientWidth));
+    const h = Math.max(1, Math.round(canvasWrap.clientHeight));
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+  }
+
   async function redraw() {
+    syncCanvasSize();
     const item = getItem();
     const color = getColor();
     const photoSrc = color[viewKey] || null;
@@ -173,6 +180,12 @@ export function createView({ label, getItem, getColor, viewKey }) {
     updatePopover();
   }
 
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => { redraw(); }).observe(canvasWrap);
+  } else {
+    window.addEventListener('resize', redraw);
+  }
+
   function cmPerW() {
     return getItem().cmPerW || DEFAULT_CM_PER_W;
   }
@@ -183,11 +196,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
   function updatePopover() {
     const a = activeSlot();
     if (!a) { popover.hidden = true; return; }
-    const h = getDesignHandles(a, currentDesignArea(), CANVAS_W, CANVAS_H);
+    const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
     const cRect = canvas.getBoundingClientRect();
     const vRect = el.getBoundingClientRect();
-    const sx = cRect.width / CANVAS_W;
-    const sy = cRect.height / CANVAS_H;
+    const sx = cRect.width / canvas.width;
+    const sy = cRect.height / canvas.height;
     const x = (cRect.left - vRect.left) + h.tr.x * sx + 10;
     const y = (cRect.top - vRect.top) + h.tr.y * sy - 12;
     popover.style.left = `${x}px`;
@@ -578,7 +591,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   function modeAtPoint(x, y) {
     const a = activeSlot();
     if (a) {
-      const h = getDesignHandles(a, currentDesignArea(), CANVAS_W, CANVAS_H);
+      const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
       const near = (p) => Math.hypot(x - p.x, y - p.y) < HANDLE_HIT;
       if (near(h.rot)) return { kind: activeKind, mode: 'rotate' };
       if (near(h.tl)) return { kind: activeKind, mode: 'scale-tl' };
@@ -586,10 +599,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
       if (near(h.br)) return { kind: activeKind, mode: 'scale-br' };
       if (near(h.bl)) return { kind: activeKind, mode: 'scale-bl' };
     }
-    if (has(slots.text) && pointInDesign(x, y, slots.text, currentDesignArea(), CANVAS_W, CANVAS_H)) {
+    if (has(slots.text) && pointInDesign(x, y, slots.text, currentDesignArea(), canvas.width, canvas.height)) {
       return { kind: 'text', mode: 'translate' };
     }
-    if (has(slots.image) && pointInDesign(x, y, slots.image, currentDesignArea(), CANVAS_W, CANVAS_H)) {
+    if (has(slots.image) && pointInDesign(x, y, slots.image, currentDesignArea(), canvas.width, canvas.height)) {
       return { kind: 'image', mode: 'translate' };
     }
     return null;
@@ -699,7 +712,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     }
 
     const slot = slots[result.kind];
-    const h = getDesignHandles(slot, currentDesignArea(), CANVAS_W, CANVAS_H);
+    const h = getDesignHandles(slot, currentDesignArea(), canvas.width, canvas.height);
     drag = {
       kind: result.kind,
       mode: result.mode,
@@ -742,8 +755,8 @@ export function createView({ label, getItem, getColor, viewKey }) {
     }
     const slot = slots[drag.kind];
     if (drag.mode === 'translate') {
-      slot.x = (drag.centerX + (x - drag.startX)) / CANVAS_W;
-      slot.y = (drag.centerY + (y - drag.startY)) / CANVAS_H;
+      slot.x = (drag.centerX + (x - drag.startX)) / canvas.width;
+      slot.y = (drag.centerY + (y - drag.startY)) / canvas.height;
     } else if (drag.mode === 'rotate') {
       const angle = Math.atan2(y - drag.centerY, x - drag.centerX);
       slot.rotation = drag.startRotation + (angle - drag.startAngle);

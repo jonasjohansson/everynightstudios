@@ -1,4 +1,5 @@
-import { CANVAS_W, CANVAS_H } from './garments.js';
+// Canvas pixel dimensions are read off the canvas itself per-render now;
+// view.js sizes the canvas buffer to match its wrapper.
 
 const imgCache = new Map();
 function loadImage(src) {
@@ -120,8 +121,8 @@ export async function renderView(canvas, { photoSrc, tintLayers, tintHex, design
   if (!designs && design) designs = [design];
   if (!designs) designs = [];
   if (!activeDesign && design && showHandles) activeDesign = design;
-  canvas.width = CANVAS_W;
-  canvas.height = CANVAS_H;
+  const W = canvas.width;
+  const H = canvas.height;
   const ctx = canvas.getContext('2d');
 
   const bg = getCssVar('--bg') || '#fafaf7';
@@ -131,14 +132,14 @@ export async function renderView(canvas, { photoSrc, tintLayers, tintHex, design
   if (photoSrc) {
     try {
       const raw = await loadImage(photoSrc);
-      await drawFitted(ctx, trimToContent(raw, photoSrc));
+      await drawFitted(ctx, trimToContent(raw, photoSrc), W, H);
     } catch (e) {
       console.warn('garment photo failed:', e);
-      drawMissing(ctx);
+      drawMissing(ctx, W, H);
     }
   } else if (tintLayers && tintLayers.overlay && tintHex) {
     try {
-      const rect = fitRect(CANVAS_W, CANVAS_H, await loadImage(tintLayers.overlay));
+      const rect = fitRect(W, H, await loadImage(tintLayers.overlay));
       if (tintLayers.base) {
         const baseImg = await loadImage(tintLayers.base);
         ctx.drawImage(baseImg, rect.dx, rect.dy, rect.drawW, rect.drawH);
@@ -190,24 +191,33 @@ function fitRect(canvasW, canvasH, img) {
   return { dx: (canvasW - drawW) / 2, dy: (canvasH - drawH) / 2, drawW, drawH };
 }
 
-async function drawFitted(ctx, img) {
-  const { dx, dy, drawW, drawH } = fitRect(CANVAS_W, CANVAS_H, img);
+async function drawFitted(ctx, img, W, H) {
+  // Fit-contain anchored to the top so empty space falls to the bottom (where
+  // the controls overlay sits). Photos with auto-trimmed transparent borders
+  // already fill the canvas tightly.
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  const s = Math.min(W / w, H / h);
+  const drawW = w * s;
+  const drawH = h * s;
+  const dx = (W - drawW) / 2;
+  const dy = 0;
   ctx.drawImage(img, dx, dy, drawW, drawH);
 }
 
-function drawMissing(ctx) {
-  const pad = 80;
+function drawMissing(ctx, W, H) {
+  const pad = Math.min(80, W * 0.1);
   ctx.save();
   ctx.strokeStyle = 'rgba(0,0,0,0.15)';
   ctx.setLineDash([10, 8]);
   ctx.lineWidth = 1.5;
-  ctx.strokeRect(pad, pad, CANVAS_W - pad * 2, CANVAS_H - pad * 2);
+  ctx.strokeRect(pad, pad, W - pad * 2, H - pad * 2);
   ctx.setLineDash([]);
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.font = '22px ui-monospace, Menlo, monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('no photo yet', CANVAS_W / 2, CANVAS_H / 2);
+  ctx.fillText('no photo yet', W / 2, H / 2);
   ctx.restore();
 }
 
