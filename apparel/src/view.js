@@ -153,6 +153,42 @@ export function createView({ label, getItem, getColor, viewKey }) {
   let currentItemId = getItem().id;
   let globalColor = null; // most recently picked design-color, applied to new layers
 
+  // Per-view undo/redo. snapshot() captures the current layers + active slot;
+  // history.length is capped. inHistoryOp guards against re-snapshotting while
+  // applying a previous snapshot.
+  const history = [];
+  const HISTORY_MAX = 40;
+  let historyIndex = -1;
+  let inHistoryOp = false;
+  function cloneLayer(l) { return { ...l }; }
+  function snapshot() {
+    if (inHistoryOp) return;
+    const snap = { layers: layers.map(cloneLayer), active: activeIndex };
+    history.length = historyIndex + 1;
+    history.push(snap);
+    if (history.length > HISTORY_MAX) history.shift();
+    historyIndex = history.length - 1;
+  }
+  async function applySnapshot(snap) {
+    inHistoryOp = true;
+    layers = snap.layers.map(cloneLayer);
+    activeIndex = Math.min(snap.active ?? -1, layers.length - 1);
+    updateControls();
+    redraw();
+    persist();
+    inHistoryOp = false;
+  }
+  function undo() {
+    if (historyIndex <= 0) return;
+    historyIndex--;
+    applySnapshot(history[historyIndex]);
+  }
+  function redo() {
+    if (historyIndex >= history.length - 1) return;
+    historyIndex++;
+    applySnapshot(history[historyIndex]);
+  }
+
   const active = () => activeIndex >= 0 ? layers[activeIndex] : null;
 
   function currentDesignArea() {
@@ -436,12 +472,13 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const filled = layers.filter(l => l.image);
     if (filled.length === 0) {
       setLast(viewKey, forItemId, null);
-      return;
+    } else {
+      setLast(viewKey, forItemId, {
+        layers: filled.map(serializeLayer),
+        active: activeIndex,
+      });
     }
-    setLast(viewKey, forItemId, {
-      layers: filled.map(serializeLayer),
-      active: activeIndex,
-    });
+    snapshot();
   }
   let persistTimer = null;
   function schedulePersist() {
@@ -925,6 +962,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
     currentItemId = newItemId;
     layers = [];
     activeIndex = -1;
+    // Reset undo history on item change — previous brand's edits aren't
+    // meaningful against the new item's design area.
+    history.length = 0;
+    historyIndex = -1;
 
     const saved = getLast(viewKey, newItemId);
     if (saved) {
@@ -981,6 +1022,8 @@ export function createView({ label, getItem, getColor, viewKey }) {
     loadForCurrentItem,
     setGlobalColor,
     clearGlobalColor,
+    undo,
+    redo,
     getDesigns: () => layers.filter(l => l.image),
     getHandlesVisible: () => activeIndex >= 0,
     setHandlesVisible: (v) => {

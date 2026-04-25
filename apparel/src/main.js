@@ -128,6 +128,28 @@ const back  = createView({ label: 'Back',  getItem, getColor, viewKey: 'back'  }
 views.appendChild(front.el);
 views.appendChild(back.el);
 
+// Track which view was last clicked so keyboard shortcuts apply there.
+let focusedView = front;
+document.addEventListener('pointerdown', (e) => {
+  if (front.el.contains(e.target)) focusedView = front;
+  else if (back.el.contains(e.target)) focusedView = back;
+}, true);
+
+document.addEventListener('keydown', (e) => {
+  // Don't intercept when typing into a field.
+  if (e.target.matches('input, textarea, select')) return;
+  if (!(e.metaKey || e.ctrlKey)) return;
+  const k = e.key.toLowerCase();
+  if (k === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) focusedView.redo();
+    else focusedView.undo();
+  } else if (k === 'y') {
+    e.preventDefault();
+    focusedView.redo();
+  }
+});
+
 designColor.addEventListener('input', () => {
   front.setGlobalColor(designColor.value);
   back.setGlobalColor(designColor.value);
