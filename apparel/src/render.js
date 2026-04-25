@@ -182,26 +182,21 @@ async function tintedImage(src, hex) {
   return c;
 }
 
-function fitRect(canvasW, canvasH, img) {
+function fitRect(canvasW, canvasH, img, mode = 'cover') {
   const w = img.naturalWidth || img.width;
   const h = img.naturalHeight || img.height;
-  const s = Math.min(canvasW / w, canvasH / h);
+  const s = mode === 'cover'
+    ? Math.max(canvasW / w, canvasH / h)
+    : Math.min(canvasW / w, canvasH / h);
   const drawW = w * s;
   const drawH = h * s;
   return { dx: (canvasW - drawW) / 2, dy: (canvasH - drawH) / 2, drawW, drawH };
 }
 
 async function drawFitted(ctx, img, W, H) {
-  // Fit-contain anchored to the top so empty space falls to the bottom (where
-  // the controls overlay sits). Photos with auto-trimmed transparent borders
-  // already fill the canvas tightly.
-  const w = img.naturalWidth || img.width;
-  const h = img.naturalHeight || img.height;
-  const s = Math.min(W / w, H / h);
-  const drawW = w * s;
-  const drawH = h * s;
-  const dx = (W - drawW) / 2;
-  const dy = 0;
+  // Cover-fit, centered: garment fills the canvas in both dimensions; whichever
+  // axis is "extra" gets cropped at the edges.
+  const { dx, dy, drawW, drawH } = fitRect(W, H, img, 'cover');
   ctx.drawImage(img, dx, dy, drawW, drawH);
 }
 

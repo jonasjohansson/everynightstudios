@@ -69,12 +69,12 @@ export async function exportZip({ item, color, front, back }) {
   const backDesigns = back.getDesigns();
 
   for (const [side, designs] of [['front', frontDesigns], ['back', backDesigns]]) {
-    for (const kind of ['image', 'text']) {
-      const d = designs?.[kind];
-      if (!d?.dataUrl) continue;
+    designs.forEach((d, i) => {
+      if (!d?.dataUrl) return;
       const { name, ext } = splitFilename(d.filename);
-      zip.file(`${base}-design-${side}-${kind}-${slugify(name)}.${ext}`, dataUrlToBlob(d.dataUrl));
-    }
+      const idx = String(i + 1).padStart(2, '0');
+      zip.file(`${base}-design-${side}-${idx}-${d.kind}-${slugify(name)}.${ext}`, dataUrlToBlob(d.dataUrl));
+    });
   }
 
   const out = await zip.generateAsync({ type: 'blob' });

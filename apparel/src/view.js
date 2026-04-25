@@ -24,8 +24,6 @@ const DEFAULT_FONT_SIZE = 160;
 const RECENT_KEY = 'apparel:recent-designs';
 const LAST_KEY = (viewKey, itemId) => `apparel:last-design:${viewKey}:${itemId}`;
 const MAX_RECENT = 6;
-// Approx cm spanned by the canvas pixel buffer width — used to convert design
-// dimensions to cm in the size popover. Per-item override comes from item.cmPerW.
 const DEFAULT_CM_PER_W = 50;
 
 function readRecent() {
@@ -34,7 +32,7 @@ function readRecent() {
 }
 function writeRecent(list) {
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT))); }
-  catch { /* quota exceeded — silently skip */ }
+  catch { /* quota — silently skip */ }
 }
 function pushRecent(entry) {
   const list = readRecent().filter(r => r.dataUrl !== entry.dataUrl);
@@ -127,27 +125,23 @@ export function createView({ label, getItem, getColor, viewKey }) {
     x: 0.5, y: 0.36, scale: 1, rotation: 0,
     colorize: 'original', blendMode: 'source-over', cropMode: 'none',
   });
-  const defaultImageSlot = () => ({
-    kind: 'image',
-    image: null, dataUrl: null, filename: null,
-    ...defaultPlacement(),
+  const newImageLayer = () => ({
+    kind: 'image', image: null, dataUrl: null, filename: null, ...defaultPlacement(),
   });
-  const defaultTextSlot = () => ({
-    kind: 'text',
-    image: null, dataUrl: null, filename: null,
+  const newTextLayer = () => ({
+    kind: 'text', image: null, dataUrl: null, filename: null,
     text: DEFAULT_TEXT, fontId: DEFAULT_FONT_ID, fontSize: DEFAULT_FONT_SIZE, textColor: '#000000',
+    fontFamily: 'OffBit', fontWeight: 400,
     ...defaultPlacement(),
   });
 
-  let slots = { image: defaultImageSlot(), text: defaultTextSlot() };
-  let activeKind = null; // 'image' | 'text' | null
-  let savedActiveKind = null;
+  let layers = [];
+  let activeIndex = -1;
+  let savedActiveIndex = -1;
   let lastCustomHex = '#ff3366';
   let currentItemId = getItem().id;
 
-  const has = (s) => !!s && !!s.image;
-  const activeSlot = () => activeKind ? slots[activeKind] : null;
-  const anyContent = () => has(slots.image) || has(slots.text);
+  const active = () => activeIndex >= 0 ? layers[activeIndex] : null;
 
   function currentDesignArea() {
     return getItem().design[viewKey];
@@ -166,16 +160,13 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const color = getColor();
     const photoSrc = color[viewKey] || null;
     const tintLayers = !photoSrc && item.tintBase ? item.tintBase[viewKey] : null;
-    const designs = [];
-    if (has(slots.image)) designs.push(slots.image);
-    if (has(slots.text)) designs.push(slots.text);
     await renderView(canvas, {
       photoSrc,
       tintLayers,
       tintHex: color.hex,
-      designs,
+      designs: layers.filter(l => l.image),
       designArea: currentDesignArea(),
-      activeDesign: activeSlot(),
+      activeDesign: active(),
     });
     updatePopover();
   }
@@ -185,44 +176,6 @@ export function createView({ label, getItem, getColor, viewKey }) {
   } else {
     window.addEventListener('resize', redraw);
   }
-
-  function cmPerW() {
-    return getItem().cmPerW || DEFAULT_CM_PER_W;
-  }
-  function designWidthCm(slot) {
-    const area = currentDesignArea();
-    return area.w * cmPerW() * slot.scale;
-  }
-  function updatePopover() {
-    const a = activeSlot();
-    if (!a) { popover.hidden = true; return; }
-    const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
-    const cRect = canvas.getBoundingClientRect();
-    const vRect = el.getBoundingClientRect();
-    const sx = cRect.width / canvas.width;
-    const sy = cRect.height / canvas.height;
-    const x = (cRect.left - vRect.left) + h.tr.x * sx + 10;
-    const y = (cRect.top - vRect.top) + h.tr.y * sy - 12;
-    popover.style.left = `${x}px`;
-    popover.style.top = `${y}px`;
-    popover.hidden = false;
-    if (document.activeElement !== widthCmInput) {
-      widthCmInput.value = designWidthCm(a).toFixed(1);
-    }
-  }
-  widthCmInput.addEventListener('input', () => {
-    const a = activeSlot();
-    if (!a) return;
-    const v = parseFloat(widthCmInput.value);
-    if (!v || !isFinite(v)) return;
-    const area = currentDesignArea();
-    a.scale = v / (area.w * cmPerW());
-    schedulePersist();
-    redraw();
-  });
-  // Keep popover from triggering canvas pointer events.
-  popover.addEventListener('pointerdown', (e) => e.stopPropagation());
-  popover.addEventListener('wheel', (e) => e.stopPropagation());
 
   function applyDesignAreaTo(slot) {
     const area = currentDesignArea();
@@ -239,6 +192,41 @@ export function createView({ label, getItem, getColor, viewKey }) {
     slot.cropMode = saved.cropMode ?? 'none';
   }
 
+  // ---------- size popover (cm width) -----------------------------------------
+  function cmPerW() { return getItem().cmPerW || DEFAULT_CM_PER_W; }
+  function designWidthCm(slot) {
+    return currentDesignArea().w * cmPerW() * slot.scale;
+  }
+  function updatePopover() {
+    const a = active();
+    if (!a) { popover.hidden = true; return; }
+    const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
+    const cRect = canvas.getBoundingClientRect();
+    const vRect = el.getBoundingClientRect();
+    const sx = cRect.width / canvas.width;
+    const sy = cRect.height / canvas.height;
+    const x = (cRect.left - vRect.left) + h.tr.x * sx + 10;
+    const y = (cRect.top - vRect.top) + h.tr.y * sy - 12;
+    popover.style.left = `${x}px`;
+    popover.style.top = `${y}px`;
+    popover.hidden = false;
+    if (document.activeElement !== widthCmInput) {
+      widthCmInput.value = designWidthCm(a).toFixed(1);
+    }
+  }
+  widthCmInput.addEventListener('input', () => {
+    const a = active();
+    if (!a) return;
+    const v = parseFloat(widthCmInput.value);
+    if (!v || !isFinite(v)) return;
+    a.scale = v / (currentDesignArea().w * cmPerW());
+    schedulePersist();
+    redraw();
+  });
+  popover.addEventListener('pointerdown', (e) => e.stopPropagation());
+  popover.addEventListener('wheel', (e) => e.stopPropagation());
+
+  // ---------- per-layer controls (build once, sync per active) ----------------
   let syncColorize = () => {};
   let syncBlend = () => {};
 
@@ -251,7 +239,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.className = 'colorize-btn';
       b.dataset.id = m.id;
       b.addEventListener('click', () => {
-        const a = activeSlot();
+        const a = active();
         if (!a) return;
         a.colorize = m.id;
         syncColorize();
@@ -267,7 +255,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     picker.title = 'custom color';
     picker.value = lastCustomHex;
     picker.addEventListener('input', (e) => {
-      const a = activeSlot();
+      const a = active();
       if (!a) return;
       lastCustomHex = e.target.value;
       a.colorize = lastCustomHex;
@@ -278,7 +266,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     colorizeEl.appendChild(picker);
 
     syncColorize = () => {
-      const a = activeSlot();
+      const a = active();
       if (!a) return;
       for (const b of btns) b.classList.toggle('active', a.colorize === b.dataset.id);
       const isHex = /^#[0-9a-f]{6}$/i.test(a.colorize);
@@ -298,7 +286,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.className = 'colorize-btn';
       b.dataset.id = m.id;
       b.addEventListener('click', () => {
-        const a = activeSlot();
+        const a = active();
         if (!a) return;
         a.blendMode = m.id;
         syncBlend();
@@ -309,7 +297,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       btns.push(b);
     }
     syncBlend = () => {
-      const a = activeSlot();
+      const a = active();
       if (!a) return;
       for (const b of btns) b.classList.toggle('active', a.blendMode === b.dataset.id);
     };
@@ -317,11 +305,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
   }
 
   function syncCrop() {
-    const a = activeSlot();
+    const a = active();
     cropBtn.classList.toggle('active', a?.cropMode === 'circle');
   }
   cropBtn.addEventListener('click', () => {
-    const a = activeSlot();
+    const a = active();
     if (!a) return;
     a.cropMode = a.cropMode === 'circle' ? 'none' : 'circle';
     syncCrop();
@@ -330,14 +318,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
   });
 
   function updateControls() {
-    const text = has(slots.text);
-    const a = activeSlot();
-    typeBtn.classList.toggle('active', text);
-    textInput.hidden = !text;
-    fontSelect.hidden = !text;
-    sizeSlider.hidden = !text;
-    textColorInput.hidden = !text;
-    clearBtn.hidden = !anyContent();
+    const a = active();
+    const isText = a?.kind === 'text';
+    typeBtn.classList.toggle('active', isText);
+    textInput.hidden = !isText;
+    fontSelect.hidden = !isText;
+    sizeSlider.hidden = !isText;
+    textColorInput.hidden = !isText;
+    clearBtn.hidden = !a;
     resetBtn.hidden = !a;
     cropBtn.hidden = !a;
     colorizeEl.hidden = !a;
@@ -346,33 +334,42 @@ export function createView({ label, getItem, getColor, viewKey }) {
       buildColorize();
       buildBlend();
       syncCrop();
+      if (isText) {
+        textInput.value = a.text;
+        fontSelect.value = a.fontId;
+        sizeSlider.value = String(a.fontSize);
+        textColorInput.value = a.textColor;
+      }
     }
   }
 
+  // ---------- persistence -----------------------------------------------------
+  function serializeLayer(l) {
+    if (l.kind === 'text') {
+      return {
+        kind: 'text',
+        text: l.text, fontId: l.fontId, fontSize: l.fontSize, textColor: l.textColor,
+        x: l.x, y: l.y, scale: l.scale, rotation: l.rotation,
+        colorize: l.colorize, blendMode: l.blendMode, cropMode: l.cropMode,
+      };
+    }
+    return {
+      kind: 'image',
+      dataUrl: l.dataUrl, filename: l.filename,
+      x: l.x, y: l.y, scale: l.scale, rotation: l.rotation,
+      colorize: l.colorize, blendMode: l.blendMode, cropMode: l.cropMode,
+    };
+  }
   function persist(forItemId = currentItemId) {
-    if (!anyContent()) {
+    const filled = layers.filter(l => l.image);
+    if (filled.length === 0) {
       setLast(viewKey, forItemId, null);
       return;
     }
     setLast(viewKey, forItemId, {
-      image: has(slots.image) ? serializeImage(slots.image) : null,
-      text:  has(slots.text)  ? serializeText(slots.text)   : null,
-      active: activeKind,
+      layers: filled.map(serializeLayer),
+      active: activeIndex,
     });
-  }
-  function serializeImage(s) {
-    return {
-      dataUrl: s.dataUrl, filename: s.filename,
-      x: s.x, y: s.y, scale: s.scale, rotation: s.rotation,
-      colorize: s.colorize, blendMode: s.blendMode, cropMode: s.cropMode,
-    };
-  }
-  function serializeText(s) {
-    return {
-      text: s.text, fontId: s.fontId, fontSize: s.fontSize, textColor: s.textColor,
-      x: s.x, y: s.y, scale: s.scale, rotation: s.rotation,
-      colorize: s.colorize, blendMode: s.blendMode, cropMode: s.cropMode,
-    };
   }
   let persistTimer = null;
   function schedulePersist() {
@@ -380,49 +377,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
     persistTimer = setTimeout(() => persist(), 200);
   }
 
-  async function loadImageSlot(image, dataUrl, filename, placement = null) {
-    const s = slots.image;
-    s.image = image;
-    s.dataUrl = dataUrl;
-    s.filename = filename;
-    if (placement) {
-      applyPlacement(s, placement);
-    } else {
-      applyDesignAreaTo(s);
-      s.scale = 1;
-      s.rotation = 0;
-      s.colorize = 'original';
-      s.blendMode = 'source-over';
-      s.cropMode = 'none';
-    }
-    activeKind = 'image';
-    pushRecent({ dataUrl, filename, ts: Date.now() });
-    persist();
-    notifyRecent();
-    updateControls();
-    redraw();
-  }
-
-  function clearImageSlot() {
-    slots.image = defaultImageSlot();
-    fileInput.value = '';
-    if (activeKind === 'image') activeKind = has(slots.text) ? 'text' : null;
-    persist();
-    updateControls();
-    renderRecent();
-    redraw();
-  }
-
-  async function renderTextSlot(slot) {
-    const fontDef = FONTS.find(f => f.id === slot.fontId) || FONTS[0];
-    const text = slot.text || ' ';
-    const fontSize = slot.fontSize || DEFAULT_FONT_SIZE;
-    const textColor = slot.textColor || '#000000';
-    // Stash the resolved family/weight so the renderer can draw text directly
-    // (avoids canvas-to-canvas resampling artifacts). The rasterized PNG is
-    // still produced because the export and recent thumbnails want it.
-    slot.fontFamily = fontDef.family;
-    slot.fontWeight = fontDef.weight;
+  // ---------- text rendering for a layer (used by export + recent thumbnail) --
+  async function renderTextLayer(l) {
+    const fontDef = FONTS.find(f => f.id === l.fontId) || FONTS[0];
+    const text = l.text || ' ';
+    const fontSize = l.fontSize || DEFAULT_FONT_SIZE;
+    const textColor = l.textColor || '#000000';
+    l.fontFamily = fontDef.family;
+    l.fontWeight = fontDef.weight;
     const fontSpec = `${fontDef.weight} ${fontSize}px "${fontDef.family}"`;
 
     if (document.fonts && document.fonts.load) {
@@ -434,10 +396,8 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const m = measure.measureText(text);
     const ascent = m.actualBoundingBoxAscent || fontSize * 0.8;
     const descent = m.actualBoundingBoxDescent || fontSize * 0.2;
-    const padX = 0;
-    const padY = 0;
-    const w = Math.max(1, Math.ceil(m.width) + padX * 2);
-    const h = Math.max(1, Math.ceil(ascent + descent) + padY * 2);
+    const w = Math.max(1, Math.ceil(m.width));
+    const h = Math.max(1, Math.ceil(ascent + descent));
 
     const c = document.createElement('canvas');
     c.width = w;
@@ -447,110 +407,121 @@ export function createView({ label, getItem, getColor, viewKey }) {
     ctx.fillStyle = textColor;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
-    ctx.fillText(text, padX, h / 2);
+    ctx.fillText(text, 0, h / 2);
 
     const dataUrl = c.toDataURL('image/png');
     const img = await loadImageFromDataUrl(dataUrl);
-    slot.image = img;
-    slot.dataUrl = dataUrl;
-    slot.filename = `text-${slugifyForFilename(text) || 'design'}.png`;
+    l.image = img;
+    l.dataUrl = dataUrl;
+    l.filename = `text-${slugifyForFilename(text) || 'design'}.png`;
   }
 
-  async function enterTextMode(initial = null) {
-    const slot = slots.text;
-    slot.text = initial?.text ?? slot.text ?? DEFAULT_TEXT;
-    slot.fontId = initial?.fontId ?? slot.fontId ?? DEFAULT_FONT_ID;
-    slot.fontSize = initial?.fontSize ?? slot.fontSize ?? DEFAULT_FONT_SIZE;
-    slot.textColor = initial?.textColor ?? slot.textColor ?? '#000000';
+  // ---------- adders / mutators ----------------------------------------------
+  async function addImageLayer(image, dataUrl, filename, placement = null) {
+    const l = newImageLayer();
+    l.image = image;
+    l.dataUrl = dataUrl;
+    l.filename = filename;
+    if (placement) applyPlacement(l, placement);
+    else applyDesignAreaTo(l);
+    layers.push(l);
+    activeIndex = layers.length - 1;
+    pushRecent({ dataUrl, filename, ts: Date.now() });
+    persist();
+    notifyRecent();
+    updateControls();
+    redraw();
+  }
+
+  async function addTextLayer(initial = null) {
+    const l = newTextLayer();
     if (initial) {
-      applyPlacement(slot, initial);
+      l.text = initial.text ?? l.text;
+      l.fontId = initial.fontId ?? l.fontId;
+      l.fontSize = initial.fontSize ?? l.fontSize;
+      l.textColor = initial.textColor ?? l.textColor;
+      applyPlacement(l, initial);
     } else {
-      applyDesignAreaTo(slot);
-      slot.scale = 1;
-      slot.rotation = 0;
-      slot.colorize = 'original';
-      slot.blendMode = 'source-over';
-      slot.cropMode = 'none';
+      applyDesignAreaTo(l);
     }
-    textInput.value = slot.text;
-    fontSelect.value = slot.fontId;
-    sizeSlider.value = String(slot.fontSize);
-    textColorInput.value = slot.textColor;
-    await renderTextSlot(slot);
-    activeKind = 'text';
+    await renderTextLayer(l);
+    layers.push(l);
+    activeIndex = layers.length - 1;
     persist();
     updateControls();
     redraw();
   }
 
-  function clearTextSlot() {
-    slots.text = defaultTextSlot();
-    if (activeKind === 'text') activeKind = has(slots.image) ? 'image' : null;
+  function clearActiveLayer() {
+    if (activeIndex < 0) return;
+    layers.splice(activeIndex, 1);
+    activeIndex = layers.length > 0 ? Math.min(activeIndex, layers.length - 1) : -1;
     persist();
     updateControls();
+    renderRecent();
     redraw();
   }
 
+  function clearAllLayers() {
+    layers = [];
+    activeIndex = -1;
+    fileInput.value = '';
+    persist();
+    updateControls();
+    renderRecent();
+    redraw();
+  }
+
+  // ---------- event wiring ----------------------------------------------------
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files?.[0];
     if (!file) return;
     const { image, dataUrl } = await loadImageFromFile(file);
-    loadImageSlot(image, dataUrl, file.name);
+    await addImageLayer(image, dataUrl, file.name);
+    fileInput.value = '';
   });
 
-  typeBtn.addEventListener('click', () => {
-    if (has(slots.text)) {
-      if (activeKind === 'text') clearTextSlot();
-      else { activeKind = 'text'; updateControls(); redraw(); }
-      return;
-    }
-    enterTextMode();
+  typeBtn.addEventListener('click', async () => {
+    await addTextLayer();
   });
+
   textInput.addEventListener('input', async () => {
-    const slot = slots.text;
-    slot.text = textInput.value;
-    await renderTextSlot(slot);
+    const a = active();
+    if (!a || a.kind !== 'text') return;
+    a.text = textInput.value;
+    await renderTextLayer(a);
     schedulePersist();
     redraw();
   });
   fontSelect.addEventListener('change', async () => {
-    const slot = slots.text;
-    slot.fontId = fontSelect.value;
-    await renderTextSlot(slot);
+    const a = active();
+    if (!a || a.kind !== 'text') return;
+    a.fontId = fontSelect.value;
+    await renderTextLayer(a);
     schedulePersist();
     redraw();
   });
   sizeSlider.addEventListener('input', async () => {
-    const slot = slots.text;
-    slot.fontSize = parseInt(sizeSlider.value, 10) || DEFAULT_FONT_SIZE;
-    await renderTextSlot(slot);
+    const a = active();
+    if (!a || a.kind !== 'text') return;
+    a.fontSize = parseInt(sizeSlider.value, 10) || DEFAULT_FONT_SIZE;
+    await renderTextLayer(a);
     schedulePersist();
     redraw();
   });
   textColorInput.addEventListener('input', async () => {
-    const slot = slots.text;
-    slot.textColor = textColorInput.value;
-    await renderTextSlot(slot);
+    const a = active();
+    if (!a || a.kind !== 'text') return;
+    a.textColor = textColorInput.value;
+    await renderTextLayer(a);
     schedulePersist();
     redraw();
   });
 
-  clearBtn.addEventListener('click', () => {
-    if (activeKind === 'text') clearTextSlot();
-    else if (activeKind === 'image') clearImageSlot();
-    else {
-      slots = { image: defaultImageSlot(), text: defaultTextSlot() };
-      activeKind = null;
-      fileInput.value = '';
-      persist();
-      updateControls();
-      renderRecent();
-      redraw();
-    }
-  });
+  clearBtn.addEventListener('click', () => clearActiveLayer());
 
   resetBtn.addEventListener('click', () => {
-    const a = activeSlot();
+    const a = active();
     if (!a) return;
     applyDesignAreaTo(a);
     a.scale = 1;
@@ -559,6 +530,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     redraw();
   });
 
+  // ---------- recent strip ----------------------------------------------------
   function renderRecent() {
     recentEl.innerHTML = '';
     const list = readRecent();
@@ -572,11 +544,12 @@ export function createView({ label, getItem, getColor, viewKey }) {
       b.className = 'recent-item';
       b.style.backgroundImage = `url("${entry.dataUrl}")`;
       b.title = entry.filename;
-      b.classList.toggle('active', slots.image.dataUrl === entry.dataUrl);
+      const a = active();
+      b.classList.toggle('active', a?.kind === 'image' && a.dataUrl === entry.dataUrl);
       b.addEventListener('click', async () => {
         try {
           const img = await loadImageFromDataUrl(entry.dataUrl);
-          await loadImageSlot(img, entry.dataUrl, entry.filename);
+          await addImageLayer(img, entry.dataUrl, entry.filename);
         } catch (e) {
           console.warn('failed to load recent design:', e);
         }
@@ -587,44 +560,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
   subscribeRecent(renderRecent);
   renderRecent();
 
-  // Hit testing — checks active slot's handles, then both slots' bodies (text on top).
-  function modeAtPoint(x, y) {
-    const a = activeSlot();
-    if (a) {
-      const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
-      const near = (p) => Math.hypot(x - p.x, y - p.y) < HANDLE_HIT;
-      if (near(h.rot)) return { kind: activeKind, mode: 'rotate' };
-      if (near(h.tl)) return { kind: activeKind, mode: 'scale-tl' };
-      if (near(h.tr)) return { kind: activeKind, mode: 'scale-tr' };
-      if (near(h.br)) return { kind: activeKind, mode: 'scale-br' };
-      if (near(h.bl)) return { kind: activeKind, mode: 'scale-bl' };
-    }
-    if (has(slots.text) && pointInDesign(x, y, slots.text, currentDesignArea(), canvas.width, canvas.height)) {
-      return { kind: 'text', mode: 'translate' };
-    }
-    if (has(slots.image) && pointInDesign(x, y, slots.image, currentDesignArea(), canvas.width, canvas.height)) {
-      return { kind: 'image', mode: 'translate' };
-    }
-    return null;
-  }
-
-  function cursorForMode(result, dragging) {
-    if (!result) return '';
-    const mode = result.mode;
-    if (mode === 'translate') return dragging ? 'grabbing' : 'move';
-    if (mode === 'rotate') return dragging ? 'grabbing' : 'grab';
-    if (mode === 'scale-tl' || mode === 'scale-br') return 'nwse-resize';
-    if (mode === 'scale-tr' || mode === 'scale-bl') return 'nesw-resize';
-    return '';
-  }
-
-  // --- Zoom + pan -----------------------------------------------------------
+  // ---------- zoom + pan ------------------------------------------------------
   const ZOOM_MIN = 1;
   const ZOOM_MAX = 8;
   let zoom = 1;
-  let panX = 0;
-  let panY = 0;
-
+  let panX = 0, panY = 0;
   function applyTransform() {
     if (zoom === 1 && panX === 0 && panY === 0) {
       canvas.style.transform = '';
@@ -634,14 +574,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       el.classList.toggle('zoomed', zoom > 1);
     }
   }
-
-  function resetZoom() {
-    zoom = 1;
-    panX = 0;
-    panY = 0;
-    applyTransform();
-  }
-
+  function resetZoom() { zoom = 1; panX = 0; panY = 0; applyTransform(); }
   canvasWrap.addEventListener('wheel', (e) => {
     e.preventDefault();
     const rect = canvasWrap.getBoundingClientRect();
@@ -657,15 +590,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
     if (zoom <= 1.001) { zoom = 1; panX = 0; panY = 0; }
     applyTransform();
   }, { passive: false });
-
   canvas.addEventListener('dblclick', (e) => {
     if (zoom !== 1 || panX !== 0 || panY !== 0) {
       e.preventDefault();
       resetZoom();
     }
   });
-  // -------------------------------------------------------------------------
 
+  // ---------- pointer / drag --------------------------------------------------
   let drag = null;
   function toCanvasCoords(evt) {
     const rect = canvas.getBoundingClientRect();
@@ -677,9 +609,39 @@ export function createView({ label, getItem, getColor, viewKey }) {
     };
   }
 
+  function modeAtPoint(x, y) {
+    const a = active();
+    if (a) {
+      const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
+      const near = (p) => Math.hypot(x - p.x, y - p.y) < HANDLE_HIT;
+      if (near(h.rot)) return { index: activeIndex, mode: 'rotate' };
+      if (near(h.tl)) return { index: activeIndex, mode: 'scale-tl' };
+      if (near(h.tr)) return { index: activeIndex, mode: 'scale-tr' };
+      if (near(h.br)) return { index: activeIndex, mode: 'scale-br' };
+      if (near(h.bl)) return { index: activeIndex, mode: 'scale-bl' };
+    }
+    for (let i = layers.length - 1; i >= 0; i--) {
+      if (!layers[i].image) continue;
+      if (pointInDesign(x, y, layers[i], currentDesignArea(), canvas.width, canvas.height)) {
+        return { index: i, mode: 'translate' };
+      }
+    }
+    return null;
+  }
+
+  function cursorForMode(result, dragging) {
+    if (!result) return '';
+    const mode = result.mode;
+    if (mode === 'translate') return dragging ? 'grabbing' : 'move';
+    if (mode === 'rotate') return dragging ? 'grabbing' : 'grab';
+    if (mode === 'scale-tl' || mode === 'scale-br') return 'nwse-resize';
+    if (mode === 'scale-tr' || mode === 'scale-bl') return 'nesw-resize';
+    return '';
+  }
+
   function startPan(e) {
     drag = {
-      kind: null, mode: 'pan',
+      index: -1, mode: 'pan',
       startClientX: e.clientX, startClientY: e.clientY,
       startPanX: panX, startPanY: panY,
     };
@@ -689,32 +651,30 @@ export function createView({ label, getItem, getColor, viewKey }) {
   }
 
   canvas.addEventListener('pointerdown', (e) => {
-    // Middle-click anywhere → pan. Left-click on empty area while zoomed → pan.
     if (e.button === 1) { startPan(e); return; }
-
     const { x, y } = toCanvasCoords(e);
     const result = modeAtPoint(x, y);
 
     if (!result) {
       if (zoom > 1 && e.button === 0) { startPan(e); return; }
-      if (activeKind) {
-        activeKind = null;
+      if (activeIndex >= 0) {
+        activeIndex = -1;
         updateControls();
         redraw();
       }
       return;
     }
 
-    if (activeKind !== result.kind) {
-      activeKind = result.kind;
+    if (activeIndex !== result.index) {
+      activeIndex = result.index;
       updateControls();
       redraw();
     }
 
-    const slot = slots[result.kind];
+    const slot = layers[result.index];
     const h = getDesignHandles(slot, currentDesignArea(), canvas.width, canvas.height);
     drag = {
-      kind: result.kind,
+      index: result.index,
       mode: result.mode,
       centerX: h.center.x, centerY: h.center.y,
       startX: x, startY: y,
@@ -753,7 +713,8 @@ export function createView({ label, getItem, getColor, viewKey }) {
       canvas.style.cursor = cursorForMode(hover, false) || fallback;
       return;
     }
-    const slot = slots[drag.kind];
+    const slot = layers[drag.index];
+    if (!slot) return;
     if (drag.mode === 'translate') {
       slot.x = (drag.centerX + (x - drag.startX)) / canvas.width;
       slot.y = (drag.centerY + (y - drag.startY)) / canvas.height;
@@ -788,56 +749,58 @@ export function createView({ label, getItem, getColor, viewKey }) {
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
-  // Restore from persisted state. Handles legacy single-slot format too.
+  // ---------- restore ---------------------------------------------------------
   async function restoreFromSaved(saved) {
     if (!saved) return;
-    const isLegacy = saved.kind === 'image' || saved.kind === 'text' || (saved.dataUrl && !saved.image && !saved.text);
-    if (isLegacy) {
-      if (saved.kind === 'text') return enterTextMode(saved);
-      try {
-        const img = await loadImageFromDataUrl(saved.dataUrl);
-        await loadImageSlot(img, saved.dataUrl, saved.filename, saved);
-      } catch {}
-      return;
+    layers = [];
+    activeIndex = -1;
+    let serial = [];
+    if (Array.isArray(saved.layers)) serial = saved.layers;
+    else if (saved.image || saved.text) {
+      // legacy: single { image, text, active }
+      if (saved.image) serial.push({ kind: 'image', ...saved.image });
+      if (saved.text) serial.push({ kind: 'text', ...saved.text });
+    } else if (saved.kind && (saved.dataUrl || saved.text)) {
+      // very legacy: single slot
+      serial.push(saved);
     }
-    if (saved.image && saved.image.dataUrl) {
-      try {
-        const img = await loadImageFromDataUrl(saved.image.dataUrl);
-        const s = slots.image;
-        s.image = img;
-        s.dataUrl = saved.image.dataUrl;
-        s.filename = saved.image.filename;
-        applyPlacement(s, saved.image);
-      } catch (e) {
-        console.warn('image restore failed:', e);
+    for (const s of serial) {
+      if (s.kind === 'text') {
+        const l = newTextLayer();
+        l.text = s.text ?? l.text;
+        l.fontId = s.fontId ?? l.fontId;
+        l.fontSize = s.fontSize ?? l.fontSize;
+        l.textColor = s.textColor ?? l.textColor;
+        applyPlacement(l, s);
+        await renderTextLayer(l);
+        layers.push(l);
+      } else {
+        if (!s.dataUrl) continue;
+        try {
+          const img = await loadImageFromDataUrl(s.dataUrl);
+          const l = newImageLayer();
+          l.image = img;
+          l.dataUrl = s.dataUrl;
+          l.filename = s.filename;
+          applyPlacement(l, s);
+          layers.push(l);
+        } catch (e) {
+          console.warn('image restore failed:', e);
+        }
       }
     }
-    if (saved.text) {
-      const t = slots.text;
-      t.text = saved.text.text ?? DEFAULT_TEXT;
-      t.fontId = saved.text.fontId ?? DEFAULT_FONT_ID;
-      t.fontSize = saved.text.fontSize ?? DEFAULT_FONT_SIZE;
-      t.textColor = saved.text.textColor ?? '#000000';
-      applyPlacement(t, saved.text);
-      textInput.value = t.text;
-      fontSelect.value = t.fontId;
-      sizeSlider.value = String(t.fontSize);
-      textColorInput.value = t.textColor;
-      await renderTextSlot(t);
+    if (typeof saved.active === 'number' && saved.active >= 0 && saved.active < layers.length) {
+      activeIndex = saved.active;
+    } else if (layers.length > 0) {
+      activeIndex = layers.length - 1;
     }
-    if (saved.active && has(slots[saved.active])) activeKind = saved.active;
-    else if (has(slots.image)) activeKind = 'image';
-    else if (has(slots.text)) activeKind = 'text';
     updateControls();
     redraw();
   }
 
   redraw();
-
   const last = getLast(viewKey, currentItemId);
-  if (last) {
-    restoreFromSaved(last).catch(() => setLast(viewKey, currentItemId, null));
-  }
+  if (last) restoreFromSaved(last).catch(() => setLast(viewKey, currentItemId, null));
 
   async function loadForCurrentItem() {
     const newItemId = getItem().id;
@@ -845,53 +808,46 @@ export function createView({ label, getItem, getColor, viewKey }) {
       redraw();
       return;
     }
-    if (anyContent()) persist(currentItemId);
+    if (layers.some(l => l.image)) persist(currentItemId);
     currentItemId = newItemId;
-
-    slots = { image: defaultImageSlot(), text: defaultTextSlot() };
-    activeKind = null;
+    layers = [];
+    activeIndex = -1;
     const saved = getLast(viewKey, newItemId);
-    if (saved) {
-      await restoreFromSaved(saved);
-    } else {
-      updateControls();
-      redraw();
-    }
+    if (saved) await restoreFromSaved(saved);
+    else { updateControls(); redraw(); }
   }
 
   async function setGlobalColor(hex) {
     let touched = false;
-    for (const k of ['image', 'text']) {
-      const s = slots[k];
-      if (!s.image) continue;
-      s.colorize = hex;
-      if (s.kind === 'text') {
-        s.textColor = hex;
-        if (k === 'text') textColorInput.value = hex;
-        await renderTextSlot(s);
+    for (const l of layers) {
+      if (!l.image) continue;
+      l.colorize = hex;
+      if (l.kind === 'text') {
+        l.textColor = hex;
+        await renderTextLayer(l);
       }
       touched = true;
     }
     if (!touched) return;
-    if (activeSlot()) buildColorize();
+    if (active()?.kind === 'text') textColorInput.value = hex;
+    if (active()) buildColorize();
     schedulePersist();
     redraw();
   }
   async function clearGlobalColor() {
     let touched = false;
-    for (const k of ['image', 'text']) {
-      const s = slots[k];
-      if (!s.image) continue;
-      s.colorize = 'original';
-      if (s.kind === 'text') {
-        s.textColor = '#000000';
-        if (k === 'text') textColorInput.value = '#000000';
-        await renderTextSlot(s);
+    for (const l of layers) {
+      if (!l.image) continue;
+      l.colorize = 'original';
+      if (l.kind === 'text') {
+        l.textColor = '#000000';
+        await renderTextLayer(l);
       }
       touched = true;
     }
     if (!touched) return;
-    if (activeSlot()) buildColorize();
+    if (active()?.kind === 'text') textColorInput.value = '#000000';
+    if (active()) buildColorize();
     schedulePersist();
     redraw();
   }
@@ -902,14 +858,11 @@ export function createView({ label, getItem, getColor, viewKey }) {
     loadForCurrentItem,
     setGlobalColor,
     clearGlobalColor,
-    getDesigns: () => ({
-      image: has(slots.image) ? slots.image : null,
-      text:  has(slots.text)  ? slots.text  : null,
-    }),
-    getHandlesVisible: () => activeKind != null,
+    getDesigns: () => layers.filter(l => l.image),
+    getHandlesVisible: () => activeIndex >= 0,
     setHandlesVisible: (v) => {
-      if (!v) { savedActiveKind = activeKind; activeKind = null; }
-      else if (savedActiveKind) { activeKind = savedActiveKind; savedActiveKind = null; }
+      if (!v) { savedActiveIndex = activeIndex; activeIndex = -1; }
+      else if (savedActiveIndex >= 0) { activeIndex = savedActiveIndex; savedActiveIndex = -1; }
     },
   };
 }
