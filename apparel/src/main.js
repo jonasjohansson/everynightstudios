@@ -10,6 +10,28 @@ const state = {
   colorId: catalog[0].colors[0].id,
 };
 
+// Read item + color from the URL hash (e.g. #item=sttu199&color=c727) so
+// pasted links open on a specific configuration. Falls back to defaults.
+(function applyHash() {
+  const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const hashItem = params.get('item');
+  const hashColor = params.get('color');
+  if (hashItem && catalog.some(x => x.id === hashItem)) {
+    state.itemId = hashItem;
+    state.brand = catalog.find(x => x.id === hashItem).brand;
+  }
+  const item = catalog.find(x => x.id === state.itemId);
+  if (hashColor && item.colors.some(c => c.id === hashColor)) {
+    state.colorId = hashColor;
+  }
+})();
+
+function syncHash() {
+  const next = `item=${state.itemId}&color=${state.colorId}`;
+  if (location.hash.replace(/^#/, '') === next) return;
+  history.replaceState(null, '', `#${next}`);
+}
+
 const stylesFor = (brand) => catalog.filter(x => x.brand === brand);
 const getItem = () => catalog.find(x => x.id === state.itemId);
 const getColor = () => {
@@ -99,6 +121,7 @@ function renderSwatches() {
     b.addEventListener('click', () => {
       state.colorId = c.id;
       renderSwatches();
+      syncHash();
       front.redraw();
       back.redraw();
     });
@@ -111,6 +134,7 @@ brandSelect.addEventListener('change', () => {
   renderStyles();
   updateSourceLink();
   renderSwatches();
+  syncHash();
   front.loadForCurrentItem();
   back.loadForCurrentItem();
 });
@@ -119,6 +143,7 @@ styleSelect.addEventListener('change', () => {
   state.itemId = styleSelect.value;
   updateSourceLink();
   renderSwatches();
+  syncHash();
   front.loadForCurrentItem();
   back.loadForCurrentItem();
 });
@@ -180,3 +205,4 @@ brandSelect.value = state.brand;
 renderStyles();
 updateSourceLink();
 renderSwatches();
+syncHash();
