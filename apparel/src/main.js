@@ -30,29 +30,28 @@ bar.innerHTML = `
     <select class="style"></select>
   </label>
   <a class="source" target="_blank" rel="noopener" hidden>source ↗</a>
-  <span class="sep"></span>
-  <label>
-    color
-    <div class="swatches"></div>
-  </label>
-  <span class="color-name"></span>
-  <span class="sep"></span>
-  <label>
-    design
-    <input class="design-color" type="color" value="#ff3366">
-    <button class="design-color-clear" title="reset design colors">×</button>
-  </label>
   <span class="spacer"></span>
   <button class="export">export zip</button>
 `;
 
+// Floating left rail — garment color swatches + design color tint, always
+// reachable while the cog hides the rest of the chrome.
+const rail = document.createElement('aside');
+rail.id = 'color-rail';
+rail.innerHTML = `
+  <div class="swatches rail-swatches"></div>
+  <div class="rail-sep"></div>
+  <input class="design-color" type="color" value="#ff3366" title="design tint">
+  <button class="design-color-clear" type="button" title="reset design tint">×</button>
+`;
+document.body.appendChild(rail);
+
 const brandSelect = bar.querySelector('select.brand');
 const styleSelect = bar.querySelector('select.style');
 const sourceLink = bar.querySelector('a.source');
-const swatchRow = bar.querySelector('.swatches');
-const colorName = bar.querySelector('.color-name');
-const designColor = bar.querySelector('input.design-color');
-const designColorClear = bar.querySelector('button.design-color-clear');
+const swatchRow = rail.querySelector('.rail-swatches');
+const designColor = rail.querySelector('input.design-color');
+const designColorClear = rail.querySelector('button.design-color-clear');
 
 function updateSourceLink() {
   const item = getItem();
@@ -107,8 +106,6 @@ function renderSwatches() {
     });
     swatchRow.appendChild(b);
   }
-  const active = item.colors.find(c => c.id === state.colorId);
-  colorName.textContent = active ? active.name : '';
 }
 
 brandSelect.addEventListener('change', () => {

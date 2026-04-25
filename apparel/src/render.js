@@ -129,36 +129,42 @@ export async function renderView(canvas, { photoSrc, tintLayers, tintHex, design
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  let garment = null;
   if (photoSrc) {
     try {
       const raw = await loadImage(photoSrc);
-      await drawFitted(ctx, trimToContent(raw, photoSrc), W, H);
+      const trimmed = trimToContent(raw, photoSrc);
+      const r = fitRect(W, H, trimmed, 'cover');
+      garment = r;
+      ctx.drawImage(trimmed, r.dx, r.dy, r.drawW, r.drawH);
     } catch (e) {
       console.warn('garment photo failed:', e);
       drawMissing(ctx, W, H);
     }
   } else if (tintLayers && tintLayers.overlay && tintHex) {
     try {
-      const rect = fitRect(W, H, await loadImage(tintLayers.overlay));
+      const r = fitRect(W, H, await loadImage(tintLayers.overlay));
+      garment = r;
       if (tintLayers.base) {
         const baseImg = await loadImage(tintLayers.base);
-        ctx.drawImage(baseImg, rect.dx, rect.dy, rect.drawW, rect.drawH);
+        ctx.drawImage(baseImg, r.dx, r.dy, r.drawW, r.drawH);
       }
       const tinted = await tintedImage(tintLayers.overlay, tintHex);
-      ctx.drawImage(tinted, rect.dx, rect.dy, rect.drawW, rect.drawH);
+      ctx.drawImage(tinted, r.dx, r.dy, r.drawW, r.drawH);
     } catch (e) {
       console.warn('tint layers failed:', e);
-      drawMissing(ctx);
+      drawMissing(ctx, W, H);
     }
   } else {
-    drawMissing(ctx);
+    drawMissing(ctx, W, H);
   }
+  canvas.__garmentRect = garment;
 
   for (const d of designs) {
-    if (d && d.image) drawDesign(ctx, d, designArea, canvas.width, canvas.height);
+    if (d && d.image) drawDesign(ctx, d, designArea, W, H, garment);
   }
   if (activeDesign && activeDesign.image) {
-    drawHandles(ctx, activeDesign, designArea, canvas.width, canvas.height);
+    drawHandles(ctx, activeDesign, designArea, W, H, garment);
   }
 }
 
@@ -216,8 +222,12 @@ function drawMissing(ctx, W, H) {
   ctx.restore();
 }
 
-function designMetrics(design, area, W, H) {
-  const drawW = Math.max(1, area.w * W * design.scale);
+function designMetrics(design, area, W, H, garment) {
+  const baseX = garment?.dx ?? 0;
+  const baseY = garment?.dy ?? 0;
+  const baseW = garment?.drawW ?? W;
+  const baseH = garment?.drawH ?? H;
+  const drawW = Math.max(1, area.w * baseW * design.scale);
   let drawH;
   if (design.kind === 'text') {
     drawH = textMetrics(design, drawW).height;
@@ -228,8 +238,8 @@ function designMetrics(design, area, W, H) {
   }
   return {
     drawW, drawH,
-    cx: design.x * W,
-    cy: design.y * H,
+    cx: baseX + design.x * baseW,
+    cy: baseY + design.y * baseH,
     rotation: design.rotation || 0,
   };
 }
@@ -255,8 +265,8 @@ function invertHex(hex) {
   return '#' + (0xffffff - parseInt(m[1], 16)).toString(16).padStart(6, '0');
 }
 
-function drawTextDesign(ctx, design, area, W, H) {
-  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H);
+function drawTextDesign(ctx, design, area, W, H, garment) {
+  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H, garment);
   const { fontPx } = textMetrics(design, drawW);
   const family = design.fontFamily || 'OffBit';
   const weight = design.fontWeight || 400;
@@ -285,9 +295,9 @@ function drawTextDesign(ctx, design, area, W, H) {
   ctx.restore();
 }
 
-function drawDesign(ctx, design, area, W, H) {
-  if (design.kind === 'text') return drawTextDesign(ctx, design, area, W, H);
-  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H);
+function drawDesign(ctx, design, area, W, H, garment) {
+  if (design.kind === 'text') return drawTextDesign(ctx, design, area, W, H, garment);
+  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H, garment);
   const blend = design.blendMode || 'source-over';
   const isHex = /^#[0-9a-f]{6}$/i.test(design.colorize);
 
@@ -339,8 +349,8 @@ function luminanceTint(img, hex) {
 const HANDLE_SIZE = 10;
 const ROTATION_OFFSET = 42;
 
-function drawHandles(ctx, design, area, W, H) {
-  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H);
+function drawHandles(ctx, design, area, W, H, garment) {
+  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H, garment);
   ctx.save();
   ctx.translate(cx, cy);
   if (rotation) ctx.rotate(rotation);
@@ -388,8 +398,8 @@ function drawCircleHandle(ctx, x, y) {
   ctx.fill();
 }
 
-export function getDesignHandles(design, area, W, H) {
-  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H);
+export function getDesignHandles(design, area, W, H, garment) {
+  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H, garment);
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
   const toWorld = (lx, ly) => ({ x: cx + lx * cos - ly * sin, y: cy + lx * sin + ly * cos });
@@ -406,8 +416,8 @@ export function getDesignHandles(design, area, W, H) {
   };
 }
 
-export function pointInDesign(px, py, design, area, W, H) {
-  const h = getDesignHandles(design, area, W, H);
+export function pointInDesign(px, py, design, area, W, H, garment) {
+  const h = getDesignHandles(design, area, W, H, garment);
   const cos = Math.cos(-h.rotation);
   const sin = Math.sin(-h.rotation);
   const dx = px - h.center.x;

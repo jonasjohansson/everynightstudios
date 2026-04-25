@@ -201,7 +201,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   function updatePopover() {
     const a = active();
     if (!a) { popover.hidden = true; return; }
-    const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
+    const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height, canvas.__garmentRect);
     const cRect = canvas.getBoundingClientRect();
     const vRect = el.getBoundingClientRect();
     const sx = cRect.width / canvas.width;
@@ -617,8 +617,9 @@ export function createView({ label, getItem, getColor, viewKey }) {
 
   function modeAtPoint(x, y) {
     const a = active();
+    const g = canvas.__garmentRect;
     if (a) {
-      const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height);
+      const h = getDesignHandles(a, currentDesignArea(), canvas.width, canvas.height, g);
       const near = (p) => Math.hypot(x - p.x, y - p.y) < HANDLE_HIT;
       if (near(h.rot)) return { index: activeIndex, mode: 'rotate' };
       if (near(h.tl)) return { index: activeIndex, mode: 'scale-tl' };
@@ -628,7 +629,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     }
     for (let i = layers.length - 1; i >= 0; i--) {
       if (!layers[i].image) continue;
-      if (pointInDesign(x, y, layers[i], currentDesignArea(), canvas.width, canvas.height)) {
+      if (pointInDesign(x, y, layers[i], currentDesignArea(), canvas.width, canvas.height, g)) {
         return { index: i, mode: 'translate' };
       }
     }
@@ -678,7 +679,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     }
 
     const slot = layers[result.index];
-    const h = getDesignHandles(slot, currentDesignArea(), canvas.width, canvas.height);
+    const h = getDesignHandles(slot, currentDesignArea(), canvas.width, canvas.height, canvas.__garmentRect);
     drag = {
       index: result.index,
       mode: result.mode,
@@ -722,8 +723,13 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const slot = layers[drag.index];
     if (!slot) return;
     if (drag.mode === 'translate') {
-      slot.x = (drag.centerX + (x - drag.startX)) / canvas.width;
-      slot.y = (drag.centerY + (y - drag.startY)) / canvas.height;
+      const g = canvas.__garmentRect;
+      const baseX = g?.dx ?? 0;
+      const baseY = g?.dy ?? 0;
+      const baseW = g?.drawW ?? canvas.width;
+      const baseH = g?.drawH ?? canvas.height;
+      slot.x = (drag.centerX + (x - drag.startX) - baseX) / baseW;
+      slot.y = (drag.centerY + (y - drag.startY) - baseY) / baseH;
     } else if (drag.mode === 'rotate') {
       const angle = Math.atan2(y - drag.centerY, x - drag.centerX);
       slot.rotation = drag.startRotation + (angle - drag.startAngle);
