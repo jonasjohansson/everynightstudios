@@ -2,10 +2,11 @@ html, body { height: 100%; overflow: hidden; }
 body { display: flex; flex-direction: column; }
 
 /* Topbar extras specific to caps */
-#master-bar input.text-input { min-width: 180px; }
-#master-bar input.count { width: 54px; }
+#master-bar input.text-input { min-width: 140px; width: 140px; }
+#master-bar input.count { width: 48px; }
+#master-bar input[type="range"] { width: 100px; }
 #master-bar .size-readout {
-  min-width: 46px;
+  min-width: 44px;
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 11px;
