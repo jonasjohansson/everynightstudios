@@ -51,7 +51,6 @@ bar.innerHTML = `
     style
     <select class="style"></select>
   </label>
-  <a class="source" target="_blank" rel="noopener" hidden>source ↗</a>
 `;
 
 // Floating left rail — garment color swatches + design color tint, always
@@ -68,7 +67,17 @@ document.body.appendChild(rail);
 
 const brandSelect = bar.querySelector('select.brand');
 const styleSelect = bar.querySelector('select.style');
-const sourceLink = bar.querySelector('a.source');
+
+// Floating source link — sits beneath the export chip; href updates per item.
+const EXTERNAL_LINK_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+const sourceLink = document.createElement('a');
+sourceLink.className = 'source-btn';
+sourceLink.target = '_blank';
+sourceLink.rel = 'noopener';
+sourceLink.title = 'product source';
+sourceLink.setAttribute('aria-label', 'product source');
+sourceLink.innerHTML = EXTERNAL_LINK_SVG;
+document.body.appendChild(sourceLink);
 const swatchRow = rail.querySelector('.rail-swatches');
 const designColor = rail.querySelector('input.design-color');
 const designColorClear = rail.querySelector('button.design-color-clear');

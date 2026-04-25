@@ -27,7 +27,7 @@ body:not(.bar-open) .topbar {
 /* Floating action stack — fixed top-right column. Each tool can append more
    buttons (export, randomize, etc.). Each button shares the same chip shape.
    Buttons are dimmed until the corner is hovered (or the bar is open). */
-.settings-toggle, .export-btn, .randomize-btn {
+.settings-toggle, .export-btn, .randomize-btn, .source-btn {
   position: fixed;
   right: 8px;
   z-index: 100;
@@ -44,20 +44,24 @@ body:not(.bar-open) .topbar {
   justify-content: center;
   opacity: 0.25;
   transition: opacity 220ms ease, background 200ms ease;
+  text-decoration: none;
 }
-.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover {
+.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover, .source-btn:hover {
   background: var(--hover);
   opacity: 1;
 }
 /* Hovering any chip in the stack lights up all of them. */
-body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover) .settings-toggle,
-body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover) .export-btn,
-body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover) .randomize-btn,
+body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover, .source-btn:hover) .settings-toggle,
+body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover, .source-btn:hover) .export-btn,
+body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover, .source-btn:hover) .randomize-btn,
+body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover, .source-btn:hover) .source-btn,
 body.bar-open .settings-toggle,
 body.bar-open .export-btn,
-body.bar-open .randomize-btn { opacity: 1; }
+body.bar-open .randomize-btn,
+body.bar-open .source-btn { opacity: 1; }
 .settings-toggle { top: 8px; }
 .export-btn      { top: 44px; }
+.source-btn      { top: 80px; }
 .randomize-btn   { top: 80px; }
 body.bar-open .settings-toggle { background: var(--fg); color: var(--panel); border-color: var(--fg); }
 
