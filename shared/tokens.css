@@ -4,7 +4,8 @@
   --panel-overlay: rgba(255, 255, 255, 0.92);
   --panel-overlay-strong: rgba(255, 255, 255, 0.95);
   --fg: #111;
-  --muted: #888;
+  /* All UI text is the same near-black; `--muted` kept for backwards compat. */
+  --muted: #111;
   --faint: #bbb;
   --border: #e6e6e1;
   --border-strong: #111;
