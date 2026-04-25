@@ -25,6 +25,9 @@ const DEFAULT_FONT_SIZE = 160;
 const RECENT_KEY = 'apparel:recent-designs';
 const LAST_KEY = (viewKey, itemId) => `apparel:last-design:${viewKey}:${itemId}`;
 const MAX_RECENT = 6;
+// Approx cm spanned by the canvas pixel buffer width — used to convert design
+// dimensions to cm in the size popover. Per-item override comes from item.cmPerW.
+const DEFAULT_CM_PER_W = 50;
 
 function readRecent() {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
@@ -74,6 +77,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
   el.innerHTML = `
     <div class="label">${label}</div>
     <div class="canvas-wrap"><canvas></canvas></div>
+    <div class="size-popover" hidden>
+      <input class="width-cm" type="number" step="0.5" min="1" max="120">
+      <span>cm</span>
+    </div>
     <div class="controls">
       <label class="file-label">
         upload ${label.toLowerCase()} design
@@ -95,6 +102,8 @@ export function createView({ label, getItem, getColor, viewKey }) {
 
   const canvas = el.querySelector('canvas');
   const canvasWrap = el.querySelector('.canvas-wrap');
+  const popover = el.querySelector('.size-popover');
+  const widthCmInput = popover.querySelector('.width-cm');
   const fileInput = el.querySelector('input[type=file]');
   const typeBtn = el.querySelector('.type-text');
   const textInput = el.querySelector('.text-input');
@@ -161,7 +170,46 @@ export function createView({ label, getItem, getColor, viewKey }) {
       designArea: currentDesignArea(),
       activeDesign: activeSlot(),
     });
+    updatePopover();
   }
+
+  function cmPerW() {
+    return getItem().cmPerW || DEFAULT_CM_PER_W;
+  }
+  function designWidthCm(slot) {
+    const area = currentDesignArea();
+    return area.w * cmPerW() * slot.scale;
+  }
+  function updatePopover() {
+    const a = activeSlot();
+    if (!a) { popover.hidden = true; return; }
+    const h = getDesignHandles(a, currentDesignArea(), CANVAS_W, CANVAS_H);
+    const cRect = canvas.getBoundingClientRect();
+    const vRect = el.getBoundingClientRect();
+    const sx = cRect.width / CANVAS_W;
+    const sy = cRect.height / CANVAS_H;
+    const x = (cRect.left - vRect.left) + h.tr.x * sx + 10;
+    const y = (cRect.top - vRect.top) + h.tr.y * sy - 12;
+    popover.style.left = `${x}px`;
+    popover.style.top = `${y}px`;
+    popover.hidden = false;
+    if (document.activeElement !== widthCmInput) {
+      widthCmInput.value = designWidthCm(a).toFixed(1);
+    }
+  }
+  widthCmInput.addEventListener('input', () => {
+    const a = activeSlot();
+    if (!a) return;
+    const v = parseFloat(widthCmInput.value);
+    if (!v || !isFinite(v)) return;
+    const area = currentDesignArea();
+    a.scale = v / (area.w * cmPerW());
+    schedulePersist();
+    redraw();
+  });
+  // Keep popover from triggering canvas pointer events.
+  popover.addEventListener('pointerdown', (e) => e.stopPropagation());
+  popover.addEventListener('wheel', (e) => e.stopPropagation());
 
   function applyDesignAreaTo(slot) {
     const area = currentDesignArea();

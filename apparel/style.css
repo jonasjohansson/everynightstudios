@@ -62,6 +62,36 @@ main#views {
 .view.zoomed canvas { cursor: grab; }
 .view.zoomed canvas:active { cursor: grabbing; }
 
+/* Size popover — anchored next to the active design's TR handle */
+.view .size-popover {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.view .size-popover input.width-cm {
+  width: 56px;
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--fg);
+  border-radius: var(--radius);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 /* Per-view controls row — overlay at the bottom of the canvas */
 .view .controls {
   position: absolute;
