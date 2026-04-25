@@ -30,8 +30,6 @@ bar.innerHTML = `
     <select class="style"></select>
   </label>
   <a class="source" target="_blank" rel="noopener" hidden>source ↗</a>
-  <span class="spacer"></span>
-  <button class="export">export zip</button>
 `;
 
 // Floating left rail — garment color swatches + design color tint, always
@@ -139,7 +137,14 @@ designColorClear.addEventListener('click', () => {
   back.clearGlobalColor();
 });
 
-bar.querySelector('button.export').addEventListener('click', async () => {
+// Floating export button — sits under the cog, always visible.
+const exportBtn = document.createElement('button');
+exportBtn.className = 'export-btn';
+exportBtn.type = 'button';
+exportBtn.title = 'export zip';
+exportBtn.setAttribute('aria-label', 'export zip');
+exportBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+exportBtn.addEventListener('click', async () => {
   try {
     await exportZip({ item: getItem(), color: getColor(), front, back });
   } catch (e) {
@@ -147,6 +152,7 @@ bar.querySelector('button.export').addEventListener('click', async () => {
     alert('export failed — check console');
   }
 });
+document.body.appendChild(exportBtn);
 
 brandSelect.value = state.brand;
 renderStyles();
