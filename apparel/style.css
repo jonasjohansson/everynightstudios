@@ -1,7 +1,22 @@
 body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-/* Topbar extras specific to apparel */
-#bar .color-name,
+/* Brand / style / source — floats out from the cog when settings is open. */
+#bar.topbar {
+  position: fixed;
+  top: 8px;
+  right: 44px;
+  left: auto;
+  width: auto;
+  z-index: 90;
+  max-width: calc(100vw - 100px);
+  background: transparent;
+  border: none;
+  border-bottom: none;
+  padding: 6px 10px;
+  flex-wrap: nowrap;
+}
+body:not(.bar-open) #bar.topbar { display: none !important; }
+
 #bar a.source {
   font-size: 11px;
   color: var(--muted);
@@ -11,7 +26,6 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   margin-left: 4px;
 }
 #bar a.source:hover { color: var(--fg); }
-#bar .design-color-clear { padding: 0 8px; min-width: 22px; }
 
 /* Side-by-side front / back grid */
 main#views {
@@ -58,9 +72,9 @@ main#views {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 4px;
-  background: var(--panel-overlay);
-  border: 1px solid var(--border);
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 .view .layer-row {
   position: relative;
@@ -103,9 +117,9 @@ body:not(.bar-open) .view .layers-panel { display: none !important; }
   display: flex;
   gap: 4px;
   align-items: center;
-  padding: 4px 6px;
-  background: var(--panel-overlay-strong);
-  border: 1px solid var(--border);
+  padding: 0;
+  background: transparent;
+  border: none;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--muted);
@@ -142,10 +156,11 @@ body:not(.bar-open) .view .size-popover { display: none !important; }
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px;
-  background: var(--panel-overlay);
-  border: 1px solid var(--border);
+  padding: 0;
+  background: transparent;
+  border: none;
 }
+body:not(.bar-open) #color-rail { display: none !important; }
 #color-rail .rail-swatches {
   display: flex;
   flex-direction: column;
@@ -194,9 +209,9 @@ body:not(.bar-open) .view .size-popover { display: none !important; }
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-  padding: 8px;
-  background: var(--panel-overlay);
-  border: 1px solid var(--border);
+  padding: 0;
+  background: transparent;
+  border: none;
   font-size: 12px;
   color: var(--muted);
 }
