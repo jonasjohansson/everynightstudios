@@ -1,5 +1,20 @@
 const PREFIX = 'everynightstudios';
 
+let jszipPromise = null;
+function ensureJSZip() {
+  if (window.JSZip) return Promise.resolve();
+  if (!jszipPromise) {
+    jszipPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = new URL('../../shared/lib/jszip.min.js', import.meta.url).href;
+      s.onload = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  return jszipPromise;
+}
+
 function slugify(s) {
   return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -53,6 +68,7 @@ async function combineViews(frontCanvas, backCanvas) {
 }
 
 export async function exportZip({ item, color, front, back }) {
+  await ensureJSZip();
   const zip = new JSZip();
   const base = joinSlugs(PREFIX, 'apparel', item.id, color.id);
 

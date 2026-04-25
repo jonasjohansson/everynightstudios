@@ -4,6 +4,21 @@ import { cards } from './cards.js';
 
 const PREFIX = 'everynightstudios';
 
+let jszipPromise = null;
+function ensureJSZip() {
+  if (window.JSZip) return Promise.resolve();
+  if (!jszipPromise) {
+    jszipPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = new URL('../../shared/lib/jszip.min.js', import.meta.url).href;
+      s.onload = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  return jszipPromise;
+}
+
 function slugify(s) {
   return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -48,6 +63,7 @@ export async function exportCard(cardEntry, index, threads, master) {
 }
 
 export async function exportZip(threads, master) {
+  await ensureJSZip();
   const zip = new JSZip();
   const threadLookup = Object.fromEntries(threads.map(t => [t.hex, t.name]));
   const cardList = Array.from(cards.values());

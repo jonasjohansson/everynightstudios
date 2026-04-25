@@ -25,7 +25,8 @@ body:not(.bar-open) .topbar {
 }
 
 /* Floating action stack — fixed top-right column. Each tool can append more
-   buttons (export, randomize, etc.). Each button shares the same chip shape. */
+   buttons (export, randomize, etc.). Each button shares the same chip shape.
+   Buttons are dimmed until the corner is hovered (or the bar is open). */
 .settings-toggle, .export-btn, .randomize-btn {
   position: fixed;
   right: 8px;
@@ -41,8 +42,20 @@ body:not(.bar-open) .topbar {
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.25;
+  transition: opacity 220ms ease, background 200ms ease;
 }
-.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover { background: var(--hover); }
+.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover {
+  background: var(--hover);
+  opacity: 1;
+}
+/* Hovering any chip in the stack lights up all of them. */
+body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover) .settings-toggle,
+body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover) .export-btn,
+body:has(.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover) .randomize-btn,
+body.bar-open .settings-toggle,
+body.bar-open .export-btn,
+body.bar-open .randomize-btn { opacity: 1; }
 .settings-toggle { top: 8px; }
 .export-btn      { top: 44px; }
 .randomize-btn   { top: 80px; }

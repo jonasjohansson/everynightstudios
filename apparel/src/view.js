@@ -39,6 +39,9 @@ function pushRecent(entry) {
   list.unshift(entry);
   writeRecent(list);
 }
+function removeRecent(dataUrl) {
+  writeRecent(readRecent().filter(r => r.dataUrl !== dataUrl));
+}
 function setLast(viewKey, itemId, entry) {
   try {
     const key = LAST_KEY(viewKey, itemId);
@@ -206,11 +209,16 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const vRect = el.getBoundingClientRect();
     const sx = cRect.width / canvas.width;
     const sy = cRect.height / canvas.height;
-    const x = (cRect.left - vRect.left) + h.tr.x * sx + 10;
-    const y = (cRect.top - vRect.top) + h.tr.y * sy - 12;
+    let x = (cRect.left - vRect.left) + h.tr.x * sx + 10;
+    let y = (cRect.top - vRect.top) + h.tr.y * sy - 12;
+    // Clamp into the view bounds so the popover never falls off-screen.
+    popover.hidden = false;
+    const pw = popover.offsetWidth || 90;
+    const ph = popover.offsetHeight || 26;
+    x = Math.max(8, Math.min(vRect.width - pw - 8, x));
+    y = Math.max(8, Math.min(vRect.height - ph - 8, y));
     popover.style.left = `${x}px`;
     popover.style.top = `${y}px`;
-    popover.hidden = false;
     if (document.activeElement !== widthCmInput) {
       widthCmInput.value = designWidthCm(a).toFixed(1);
     }
@@ -560,11 +568,35 @@ export function createView({ label, getItem, getColor, viewKey }) {
           console.warn('failed to load recent design:', e);
         }
       });
+      const rm = document.createElement('span');
+      rm.className = 'recent-remove';
+      rm.textContent = '×';
+      rm.title = 'remove from history';
+      rm.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        removeRecent(entry.dataUrl);
+        notifyRecent();
+      });
+      b.appendChild(rm);
       recentEl.appendChild(b);
     }
   }
   subscribeRecent(renderRecent);
   renderRecent();
+
+  // Drag-and-drop file upload onto the canvas → adds an image layer.
+  canvasWrap.addEventListener('dragover', (e) => { e.preventDefault(); });
+  canvasWrap.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    try {
+      const { image, dataUrl } = await loadImageFromFile(file);
+      await addImageLayer(image, dataUrl, file.name);
+    } catch (err) {
+      console.warn('drop upload failed:', err);
+    }
+  });
 
   // ---------- zoom + pan ------------------------------------------------------
   const ZOOM_MIN = 1;
