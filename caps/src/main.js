@@ -22,8 +22,6 @@ const grid = document.getElementById('cap-grid');
 const bar = document.getElementById('master-bar');
 
 bar.innerHTML = `
-  <a class="back" href="../">← tools</a>
-  <span class="sep"></span>
   <input class="text-input" type="text" maxlength="14" placeholder="type anything" value="${master.text}">
   <label class="file-label">
     upload logo

@@ -212,10 +212,15 @@ function drawMissing(ctx) {
 }
 
 function designMetrics(design, area, W, H) {
-  const img = design.image;
-  const { w: iw, h: ih } = intrinsicSize(img);
-  const drawW = area.w * W * design.scale;
-  const drawH = drawW * (ih / iw);
+  const drawW = Math.max(1, area.w * W * design.scale);
+  let drawH;
+  if (design.kind === 'text') {
+    drawH = textMetrics(design, drawW).height;
+  } else {
+    const img = design.image;
+    const { w: iw, h: ih } = intrinsicSize(img);
+    drawH = drawW * (ih / iw);
+  }
   return {
     drawW, drawH,
     cx: design.x * W,
@@ -224,7 +229,59 @@ function designMetrics(design, area, W, H) {
   };
 }
 
+function textMetrics(design, drawW) {
+  const family = design.fontFamily || 'OffBit';
+  const weight = design.fontWeight || 400;
+  const text = design.text || ' ';
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = `${weight} 100px "${family}"`;
+  const baseM = measure.measureText(text);
+  const fontPx = baseM.width > 0 ? (drawW / baseM.width) * 100 : drawW / 4;
+  measure.font = `${weight} ${fontPx}px "${family}"`;
+  const m = measure.measureText(text);
+  const ascent = m.actualBoundingBoxAscent || fontPx * 0.8;
+  const descent = m.actualBoundingBoxDescent || fontPx * 0.2;
+  return { fontPx, height: Math.max(1, ascent + descent) };
+}
+
+function invertHex(hex) {
+  const m = hex && hex.match(/^#([0-9a-f]{6})$/i);
+  if (!m) return '#ffffff';
+  return '#' + (0xffffff - parseInt(m[1], 16)).toString(16).padStart(6, '0');
+}
+
+function drawTextDesign(ctx, design, area, W, H) {
+  const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H);
+  const { fontPx } = textMetrics(design, drawW);
+  const family = design.fontFamily || 'OffBit';
+  const weight = design.fontWeight || 400;
+  const blend = design.blendMode || 'source-over';
+
+  let fill = design.textColor || '#000000';
+  if (design.colorize === 'white') fill = '#ffffff';
+  else if (design.colorize === 'black') fill = '#000000';
+  else if (design.colorize === 'invert') fill = invertHex(fill);
+  else if (/^#[0-9a-f]{6}$/i.test(design.colorize)) fill = design.colorize;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (rotation) ctx.rotate(rotation);
+  if (design.cropMode === 'circle') {
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.min(drawW, drawH) / 2, 0, Math.PI * 2);
+    ctx.clip();
+  }
+  if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
+  ctx.font = `${weight} ${fontPx}px "${family}"`;
+  ctx.fillStyle = fill;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText(design.text || ' ', 0, 0);
+  ctx.restore();
+}
+
 function drawDesign(ctx, design, area, W, H) {
+  if (design.kind === 'text') return drawTextDesign(ctx, design, area, W, H);
   const { drawW, drawH, cx, cy, rotation } = designMetrics(design, area, W, H);
   const blend = design.blendMode || 'source-over';
   const isHex = /^#[0-9a-f]{6}$/i.test(design.colorize);
@@ -245,8 +302,6 @@ function drawDesign(ctx, design, area, W, H) {
     ctx.clip();
   }
   if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
-  // Text rasterizes a glyph bitmap; bilinear resampling smudges pixel fonts.
-  if (design.kind === 'text') ctx.imageSmoothingEnabled = false;
   ctx.drawImage(src, -drawW / 2, -drawH / 2, drawW, drawH);
   ctx.restore();
 }

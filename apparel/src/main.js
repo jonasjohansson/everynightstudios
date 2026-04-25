@@ -21,8 +21,6 @@ const bar = document.getElementById('bar');
 const views = document.getElementById('views');
 
 bar.innerHTML = `
-  <a class="back" href="../">← tools</a>
-  <span class="sep"></span>
   <label>
     brand
     <select class="brand"></select>
