@@ -77,6 +77,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   el.innerHTML = `
     <div class="label">${label}</div>
     <div class="canvas-wrap"><canvas></canvas></div>
+    <aside class="layers-panel" hidden></aside>
     <div class="size-popover" hidden>
       <input class="width-cm" type="number" step="0.5" min="1" max="120">
       <span>cm</span>
@@ -102,6 +103,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
 
   const canvas = el.querySelector('canvas');
   const canvasWrap = el.querySelector('.canvas-wrap');
+  const layersPanel = el.querySelector('.layers-panel');
   const popover = el.querySelector('.size-popover');
   const widthCmInput = popover.querySelector('.width-cm');
   const fileInput = el.querySelector('input[type=file]');
@@ -368,6 +370,48 @@ export function createView({ label, getItem, getColor, viewKey }) {
         sizeSlider.value = String(a.fontSize);
         textColorInput.value = a.textColor;
       }
+    }
+    renderLayersPanel();
+  }
+
+  function renderLayersPanel() {
+    layersPanel.innerHTML = '';
+    const filled = layers.map((l, i) => ({ l, i })).filter(({ l }) => l.image);
+    if (filled.length < 2) {
+      layersPanel.hidden = true;
+      return;
+    }
+    layersPanel.hidden = false;
+    // Newest on top.
+    for (let k = filled.length - 1; k >= 0; k--) {
+      const { l, i } = filled[k];
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'layer-row';
+      row.classList.toggle('active', i === activeIndex);
+      if (l.dataUrl) row.style.backgroundImage = `url("${l.dataUrl}")`;
+      row.title = l.kind === 'text' ? `text: ${l.text}` : (l.filename || 'image');
+      row.addEventListener('click', () => {
+        activeIndex = i;
+        updateControls();
+        redraw();
+      });
+      const rm = document.createElement('span');
+      rm.className = 'layer-remove';
+      rm.textContent = '×';
+      rm.title = 'remove layer';
+      rm.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const removingActive = activeIndex === i;
+        layers.splice(i, 1);
+        if (removingActive) activeIndex = layers.length > 0 ? Math.min(i, layers.length - 1) : -1;
+        else if (activeIndex > i) activeIndex--;
+        persist();
+        updateControls();
+        redraw();
+      });
+      row.appendChild(rm);
+      layersPanel.appendChild(row);
     }
   }
 

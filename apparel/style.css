@@ -49,6 +49,53 @@ main#views {
 .view.zoomed canvas { cursor: grab; }
 .view.zoomed canvas:active { cursor: grabbing; }
 
+/* Per-view layers panel — top-right corner, shows when there's more than one layer */
+.view .layers-panel {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  background: var(--panel-overlay);
+  border: 1px solid var(--border);
+}
+.view .layer-row {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background-color: var(--panel);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.view .layer-row:hover { border-color: var(--fg); }
+.view .layer-row.active { outline: 2px solid var(--fg); outline-offset: 1px; }
+.view .layer-row .layer-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--fg);
+  color: var(--panel);
+  font-size: 10px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.view .layer-row:hover .layer-remove { display: flex; }
+body:not(.bar-open) .view .layers-panel { display: none !important; }
+
 /* Size popover — anchored next to the active design's TR handle */
 .view .size-popover {
   position: absolute;
