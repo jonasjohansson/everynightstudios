@@ -821,12 +821,30 @@ export function createView({ label, getItem, getColor, viewKey }) {
       return;
     }
     if (layers.some(l => l.image)) persist(currentItemId);
+
+    const carryLayers = layers;
+    const carryActive = activeIndex;
+
     currentItemId = newItemId;
     layers = [];
     activeIndex = -1;
+
     const saved = getLast(viewKey, newItemId);
-    if (saved) await restoreFromSaved(saved);
-    else { updateControls(); redraw(); }
+    if (saved) {
+      await restoreFromSaved(saved);
+    } else if (carryLayers.length > 0) {
+      // No saved state for the new item — carry the current layers over.
+      // Their x/y are garment-relative so they stay in roughly the same place
+      // on the new shirt. Persist under the new item id.
+      layers = carryLayers;
+      activeIndex = carryActive;
+      persist();
+      updateControls();
+      redraw();
+    } else {
+      updateControls();
+      redraw();
+    }
   }
 
   async function setGlobalColor(hex) {

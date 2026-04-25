@@ -31,5 +31,10 @@ html, body {
 
 * { box-sizing: border-box; }
 
+/* Browser default for [hidden] is display:none, but our scoped rules
+   (e.g. .view .controls { display: flex }) outrank that. Force the
+   attribute to win so toggling element.hidden = true actually hides. */
+[hidden] { display: none !important; }
+
 a { color: inherit; text-decoration: none; }
 a:hover { color: var(--muted); }
