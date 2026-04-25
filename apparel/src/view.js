@@ -140,6 +140,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   let savedActiveIndex = -1;
   let lastCustomHex = '#ff3366';
   let currentItemId = getItem().id;
+  let globalColor = null; // most recently picked design-color, applied to new layers
 
   const active = () => activeIndex >= 0 ? layers[activeIndex] : null;
 
@@ -424,6 +425,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     l.filename = filename;
     if (placement) applyPlacement(l, placement);
     else applyDesignAreaTo(l);
+    if (!placement && globalColor) l.colorize = globalColor;
     layers.push(l);
     activeIndex = layers.length - 1;
     pushRecent({ dataUrl, filename, ts: Date.now() });
@@ -443,6 +445,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
       applyPlacement(l, initial);
     } else {
       applyDesignAreaTo(l);
+      if (globalColor) {
+        l.colorize = globalColor;
+        l.textColor = globalColor;
+      }
     }
     await renderTextLayer(l);
     layers.push(l);
@@ -818,7 +824,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   }
 
   async function setGlobalColor(hex) {
-    let touched = false;
+    globalColor = hex;
     for (const l of layers) {
       if (!l.image) continue;
       l.colorize = hex;
@@ -826,16 +832,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
         l.textColor = hex;
         await renderTextLayer(l);
       }
-      touched = true;
     }
-    if (!touched) return;
     if (active()?.kind === 'text') textColorInput.value = hex;
     if (active()) buildColorize();
     schedulePersist();
     redraw();
   }
   async function clearGlobalColor() {
-    let touched = false;
+    globalColor = null;
     for (const l of layers) {
       if (!l.image) continue;
       l.colorize = 'original';
@@ -843,9 +847,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
         l.textColor = '#000000';
         await renderTextLayer(l);
       }
-      touched = true;
     }
-    if (!touched) return;
     if (active()?.kind === 'text') textColorInput.value = '#000000';
     if (active()) buildColorize();
     schedulePersist();
