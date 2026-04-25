@@ -73,7 +73,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   el.className = 'view';
   el.innerHTML = `
     <div class="label">${label}</div>
-    <canvas></canvas>
+    <div class="canvas-wrap"><canvas></canvas></div>
     <div class="controls">
       <label class="file-label">
         upload ${label.toLowerCase()} design
@@ -94,6 +94,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   `;
 
   const canvas = el.querySelector('canvas');
+  const canvasWrap = el.querySelector('.canvas-wrap');
   const fileInput = el.querySelector('input[type=file]');
   const typeBtn = el.querySelector('.type-text');
   const textInput = el.querySelector('.text-input');
@@ -549,6 +550,54 @@ export function createView({ label, getItem, getColor, viewKey }) {
     return '';
   }
 
+  // --- Zoom + pan -----------------------------------------------------------
+  const ZOOM_MIN = 1;
+  const ZOOM_MAX = 8;
+  let zoom = 1;
+  let panX = 0;
+  let panY = 0;
+
+  function applyTransform() {
+    if (zoom === 1 && panX === 0 && panY === 0) {
+      canvas.style.transform = '';
+      el.classList.remove('zoomed');
+    } else {
+      canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+      el.classList.toggle('zoomed', zoom > 1);
+    }
+  }
+
+  function resetZoom() {
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    applyTransform();
+  }
+
+  canvasWrap.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvasWrap.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const oldZoom = zoom;
+    const next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, oldZoom * factor));
+    if (next === oldZoom) return;
+    panX = cx - (cx - panX) * (next / oldZoom);
+    panY = cy - (cy - panY) * (next / oldZoom);
+    zoom = next;
+    if (zoom <= 1.001) { zoom = 1; panX = 0; panY = 0; }
+    applyTransform();
+  }, { passive: false });
+
+  canvas.addEventListener('dblclick', (e) => {
+    if (zoom !== 1 || panX !== 0 || panY !== 0) {
+      e.preventDefault();
+      resetZoom();
+    }
+  });
+  // -------------------------------------------------------------------------
+
   let drag = null;
   function toCanvasCoords(evt) {
     const rect = canvas.getBoundingClientRect();
@@ -560,11 +609,26 @@ export function createView({ label, getItem, getColor, viewKey }) {
     };
   }
 
+  function startPan(e) {
+    drag = {
+      kind: null, mode: 'pan',
+      startClientX: e.clientX, startClientY: e.clientY,
+      startPanX: panX, startPanY: panY,
+    };
+    canvas.style.cursor = 'grabbing';
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
   canvas.addEventListener('pointerdown', (e) => {
+    // Middle-click anywhere → pan. Left-click on empty area while zoomed → pan.
+    if (e.button === 1) { startPan(e); return; }
+
     const { x, y } = toCanvasCoords(e);
     const result = modeAtPoint(x, y);
 
     if (!result) {
+      if (zoom > 1 && e.button === 0) { startPan(e); return; }
       if (activeKind) {
         activeKind = null;
         updateControls();
@@ -608,9 +672,17 @@ export function createView({ label, getItem, getColor, viewKey }) {
   });
 
   canvas.addEventListener('pointermove', (e) => {
+    if (drag?.mode === 'pan') {
+      panX = drag.startPanX + (e.clientX - drag.startClientX);
+      panY = drag.startPanY + (e.clientY - drag.startClientY);
+      applyTransform();
+      return;
+    }
     const { x, y } = toCanvasCoords(e);
     if (!drag) {
-      canvas.style.cursor = cursorForMode(modeAtPoint(x, y), false);
+      const hover = modeAtPoint(x, y);
+      const fallback = (zoom > 1 && !hover) ? 'grab' : '';
+      canvas.style.cursor = cursorForMode(hover, false) || fallback;
       return;
     }
     const slot = slots[drag.kind];
@@ -636,11 +708,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
 
   const endDrag = (e) => {
     if (!drag) return;
+    const wasPan = drag.mode === 'pan';
     drag = null;
     try { canvas.releasePointerCapture(e.pointerId); } catch {}
     const { x, y } = toCanvasCoords(e);
-    canvas.style.cursor = cursorForMode(modeAtPoint(x, y), false);
-    schedulePersist();
+    const hover = modeAtPoint(x, y);
+    const fallback = (zoom > 1 && !hover) ? 'grab' : '';
+    canvas.style.cursor = cursorForMode(hover, false) || fallback;
+    if (!wasPan) schedulePersist();
   };
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
