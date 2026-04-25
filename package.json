@@ -1,11 +1,12 @@
 {
-  "name": "everynight-prototyper",
-  "version": "0.1.0",
+  "name": "everynightstudios-tools",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "scrape": "node scripts/scrape.mjs",
-    "test": "node --test"
+    "test": "node --test caps/src/lib/*.test.mjs",
+    "caps:scrape": "node caps/scripts/scrape.mjs",
+    "caps:sample-hex": "node caps/scripts/sample-hex.mjs"
   },
   "dependencies": {
     "pngjs": "^7.0.0"
