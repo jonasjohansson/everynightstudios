@@ -24,10 +24,10 @@ body:not(.bar-open) .topbar {
   border-bottom-color: transparent;
 }
 
-/* Cog button — fixed top right, always visible. */
-.settings-toggle {
+/* Floating action stack — fixed top-right column. Each tool can append more
+   buttons (export, randomize, etc.). Each button shares the same chip shape. */
+.settings-toggle, .export-btn, .randomize-btn {
   position: fixed;
-  top: 8px;
   right: 8px;
   z-index: 100;
   width: 28px;
@@ -42,7 +42,10 @@ body:not(.bar-open) .topbar {
   align-items: center;
   justify-content: center;
 }
-.settings-toggle:hover { background: var(--hover); }
+.settings-toggle:hover, .export-btn:hover, .randomize-btn:hover { background: var(--hover); }
+.settings-toggle { top: 8px; }
+.export-btn      { top: 44px; }
+.randomize-btn   { top: 80px; }
 body.bar-open .settings-toggle { background: var(--fg); color: var(--panel); border-color: var(--fg); }
 
 /* Uppercase + letter-spacing on UI controls site-wide. Text inputs keep

@@ -85,26 +85,6 @@ body:not(.bar-open) .view .label,
 body:not(.bar-open) .view .controls,
 body:not(.bar-open) .view .size-popover { display: none !important; }
 
-/* Floating export button — beneath the cog (cog at top:8 + 28h, gap 8). */
-.export-btn {
-  position: fixed;
-  top: 44px;
-  right: 8px;
-  z-index: 100;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--fg);
-  cursor: pointer;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.export-btn:hover { background: var(--hover); }
-
 /* Floating left rail — garment color swatches + design tint */
 #color-rail {
   position: fixed;

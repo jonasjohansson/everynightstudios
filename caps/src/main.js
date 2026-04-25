@@ -42,9 +42,6 @@ bar.innerHTML = `
     y
     <input class="y-offset" type="range" min="-0.3" max="0.3" step="0.005" value="0">
   </label>
-  <span class="sep"></span>
-  <button class="randomize">randomize</button>
-  <button class="export">export zip</button>
 `;
 
 function handleCardExport(entry) {
@@ -102,7 +99,17 @@ bar.querySelector('.y-offset').addEventListener('input', (e) => {
   redrawAll();
 });
 
-bar.querySelector('.randomize').addEventListener('click', () => {
+// Floating buttons — randomize + export, always reachable below the cog.
+const SHUFFLE_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>`;
+const DOWNLOAD_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+
+const randomizeBtn = document.createElement('button');
+randomizeBtn.className = 'randomize-btn';
+randomizeBtn.type = 'button';
+randomizeBtn.title = 'randomize';
+randomizeBtn.setAttribute('aria-label', 'randomize');
+randomizeBtn.innerHTML = SHUFFLE_SVG;
+randomizeBtn.addEventListener('click', () => {
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   for (const c of cards.values()) {
     if (c.state.locked) continue;
@@ -110,10 +117,16 @@ bar.querySelector('.randomize').addEventListener('click', () => {
     c.setThread(pick(threads).hex);
   }
 });
+document.body.appendChild(randomizeBtn);
 
-bar.querySelector('.export').addEventListener('click', () => {
-  exportZip(threads, master);
-});
+const exportBtn = document.createElement('button');
+exportBtn.className = 'export-btn';
+exportBtn.type = 'button';
+exportBtn.title = 'export zip';
+exportBtn.setAttribute('aria-label', 'export zip');
+exportBtn.innerHTML = DOWNLOAD_SVG;
+exportBtn.addEventListener('click', () => exportZip(threads, master));
+document.body.appendChild(exportBtn);
 
 function setCardCount(target) {
   const current = cards.size;
