@@ -90,6 +90,11 @@ main#views {
   text-transform: none;
 }
 
+/* When the settings cog is off, hide all chrome — only canvas + cog visible. */
+body:not(.bar-open) .view .label,
+body:not(.bar-open) .view .controls,
+body:not(.bar-open) .view .size-popover { display: none !important; }
+
 /* Per-view controls row — overlay at the bottom of the canvas */
 .view .controls {
   position: absolute;

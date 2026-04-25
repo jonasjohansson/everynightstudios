@@ -12,15 +12,50 @@
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   z-index: 10;
-  /* Lightweight: collapse to a thin strip until hovered or focused. */
-  max-height: 200px;
+  /* Visibility is driven by `.bar-open` on <body> (toggled by the cog button). */
+  max-height: 240px;
   overflow: hidden;
-  transition: max-height 220ms ease, padding 220ms ease;
+  transition: max-height 220ms ease, padding 220ms ease, border-bottom-color 220ms ease;
 }
-.topbar:not(:hover):not(:focus-within) {
-  max-height: 6px;
+body:not(.bar-open) .topbar {
+  max-height: 0;
   padding-top: 0;
   padding-bottom: 0;
+  border-bottom-color: transparent;
+}
+
+/* Cog button — fixed top right, always visible. */
+.settings-toggle {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--fg);
+  cursor: pointer;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.settings-toggle:hover { background: var(--hover); }
+body.bar-open .settings-toggle { background: var(--fg); color: var(--panel); border-color: var(--fg); }
+
+/* Uppercase + letter-spacing on UI controls site-wide. Text inputs keep
+   the user's typed case — they target what the user actually wrote. */
+.topbar button,
+.topbar select,
+.topbar .file-label,
+.controls button,
+.controls select,
+.controls .file-label,
+.colorize-btn {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .topbar .back { font-size: 13px; color: var(--muted); }
 .topbar .back:hover { color: var(--fg); }
