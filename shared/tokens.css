@@ -16,6 +16,9 @@
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  /* Standard control height — applies to chips, buttons, inputs, selects */
+  --ctrl-h: 28px;
+  --ctrl-s: 20px; /* compact (color swatches) */
   --font-sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
