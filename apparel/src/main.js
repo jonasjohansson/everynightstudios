@@ -162,6 +162,46 @@ const back  = createView({ label: 'Back',  getItem, getColor, viewKey: 'back'  }
 views.appendChild(front.el);
 views.appendChild(back.el);
 
+// Draggable splitter between front/back so the user can show more of one side.
+const splitter = document.createElement('div');
+splitter.className = 'view-splitter';
+splitter.setAttribute('role', 'separator');
+splitter.setAttribute('aria-orientation', 'vertical');
+views.appendChild(splitter);
+
+const SPLIT_KEY = 'apparel:split';
+const MIN_PANEL = 80;
+const savedSplit = parseFloat(localStorage.getItem(SPLIT_KEY));
+if (Number.isFinite(savedSplit)) {
+  views.style.setProperty('--split', savedSplit + '%');
+}
+
+splitter.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  splitter.setPointerCapture(e.pointerId);
+  splitter.classList.add('dragging');
+  const onMove = (ev) => {
+    const rect = views.getBoundingClientRect();
+    const x = Math.max(MIN_PANEL, Math.min(rect.width - MIN_PANEL, ev.clientX - rect.left));
+    const pct = (x / rect.width) * 100;
+    views.style.setProperty('--split', pct + '%');
+  };
+  const onUp = () => {
+    splitter.classList.remove('dragging');
+    splitter.removeEventListener('pointermove', onMove);
+    splitter.removeEventListener('pointerup', onUp);
+    const cur = views.style.getPropertyValue('--split');
+    if (cur) localStorage.setItem(SPLIT_KEY, parseFloat(cur).toString());
+  };
+  splitter.addEventListener('pointermove', onMove);
+  splitter.addEventListener('pointerup', onUp);
+});
+
+splitter.addEventListener('dblclick', () => {
+  views.style.removeProperty('--split');
+  localStorage.removeItem(SPLIT_KEY);
+});
+
 // Track which view was last clicked so keyboard shortcuts apply there.
 let focusedView = front;
 document.addEventListener('pointerdown', (e) => {
@@ -172,15 +212,28 @@ document.addEventListener('pointerdown', (e) => {
 document.addEventListener('keydown', (e) => {
   // Don't intercept when typing into a field.
   if (e.target.matches('input, textarea, select')) return;
-  if (!(e.metaKey || e.ctrlKey)) return;
   const k = e.key.toLowerCase();
-  if (k === 'z') {
-    e.preventDefault();
-    if (e.shiftKey) focusedView.redo();
-    else focusedView.undo();
-  } else if (k === 'y') {
-    e.preventDefault();
-    focusedView.redo();
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod) {
+    if (k === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) focusedView.redo();
+      else focusedView.undo();
+    } else if (k === 'y') {
+      e.preventDefault();
+      focusedView.redo();
+    } else if (k === 'backspace' || k === 'delete') {
+      e.preventDefault();
+      focusedView.clear();
+    } else if (k === 'd') {
+      e.preventDefault();
+      focusedView.duplicate();
+    }
+  } else {
+    if (k === 'r') {
+      e.preventDefault();
+      focusedView.reset();
+    }
   }
 });
 

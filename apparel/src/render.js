@@ -290,11 +290,6 @@ function drawTextDesign(ctx, design, area, W, H, garment) {
   ctx.save();
   ctx.translate(cx, cy);
   if (rotation) ctx.rotate(rotation);
-  if (design.cropMode === 'circle') {
-    ctx.beginPath();
-    ctx.arc(0, 0, Math.min(drawW, drawH) / 2, 0, Math.PI * 2);
-    ctx.clip();
-  }
   if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
   ctx.font = `${weight} ${fontPx}px "${family}"`;
   ctx.fillStyle = fill;
@@ -320,11 +315,6 @@ function drawDesign(ctx, design, area, W, H, garment) {
   ctx.save();
   ctx.translate(cx, cy);
   if (rotation) ctx.rotate(rotation);
-  if (design.cropMode === 'circle') {
-    ctx.beginPath();
-    ctx.arc(0, 0, Math.min(drawW, drawH) / 2, 0, Math.PI * 2);
-    ctx.clip();
-  }
   if (blend !== 'source-over') ctx.globalCompositeOperation = blend;
   ctx.drawImage(src, -drawW / 2, -drawH / 2, drawW, drawH);
   ctx.restore();

@@ -2,16 +2,19 @@ import { renderView, getDesignHandles, pointInDesign, loadImageFromFile } from '
 
 const HANDLE_HIT = 18;
 const COLORIZE_MODES = [
-  { id: 'original', label: 'Orig' },
-  { id: 'invert',   label: 'Inv' },
-  { id: 'white',    label: 'White' },
-  { id: 'black',    label: 'Black' },
+  { id: 'original', label: 'O', title: 'Original' },
+  { id: 'invert',   label: 'I', title: 'Invert'   },
+  { id: 'white',    label: 'W', title: 'White'    },
+  { id: 'black',    label: 'B', title: 'Black'    },
 ];
 const BLEND_MODES = [
-  { id: 'source-over', label: 'Normal' },
-  { id: 'multiply',    label: 'Mult' },
-  { id: 'screen',      label: 'Scrn' },
+  { id: 'source-over', label: 'N', title: 'Normal'   },
+  { id: 'multiply',    label: 'M', title: 'Multiply' },
+  { id: 'screen',      label: 'S', title: 'Screen'   },
 ];
+const ICON_RESET = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/></svg>`;
+const ICON_DUPLICATE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>`;
+const ICON_TRASH = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
 const FONTS = [
   { id: 'offbit',        label: 'OffBit',         family: 'OffBit',         weight: 400 },
   { id: 'offbit-bold',   label: 'OffBit Bold',    family: 'OffBit',         weight: 700 },
@@ -25,6 +28,13 @@ const RECENT_KEY = 'apparel:recent-designs';
 const LAST_KEY = (viewKey, itemId) => `apparel:last-design:${viewKey}:${itemId}`;
 const MAX_RECENT = 6;
 const DEFAULT_CM_PER_W = 50;
+const NEW_IMAGE_MAX_CM = 4;
+
+function widthCmForMaxDim(image, maxCm = NEW_IMAGE_MAX_CM) {
+  const w = image?.naturalWidth || image?.width || 1;
+  const h = image?.naturalHeight || image?.height || 1;
+  return w >= h ? maxCm : maxCm * (w / h);
+}
 
 function readRecent() {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
@@ -77,13 +87,23 @@ export function createView({ label, getItem, getColor, viewKey }) {
   el.innerHTML = `
     <div class="canvas-wrap"><canvas></canvas></div>
     <aside class="layers-panel" hidden></aside>
+    <aside class="layer-actions" hidden>
+      <button class="reset" title="reset placement (R)" aria-label="reset placement">${ICON_RESET}</button>
+      <button class="duplicate" title="duplicate (⌘D)" aria-label="duplicate">${ICON_DUPLICATE}</button>
+      <div class="layer-actions-sep"></div>
+      <div class="colorize"></div>
+      <div class="layer-actions-sep"></div>
+      <div class="blend"></div>
+      <div class="layer-actions-sep"></div>
+      <button class="clear" title="remove layer" aria-label="remove layer">${ICON_TRASH}</button>
+    </aside>
     <div class="size-popover" hidden>
       <input class="width-cm" type="number" step="0.5" min="1" max="120">
       <span>cm</span>
     </div>
     <div class="controls">
       <label class="file-label">
-        upload ${label.toLowerCase()} design
+        upload
         <input type="file" accept="image/*" hidden>
       </label>
       <button class="type-text">type</button>
@@ -91,18 +111,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
       <select class="font-select" hidden></select>
       <input class="size-slider" type="range" min="40" max="400" step="2" hidden>
       <input class="text-color" type="color" hidden>
-      <button class="clear" hidden>clear</button>
-      <button class="reset" hidden>reset</button>
-      <button class="crop" hidden>circle</button>
       <div class="recent" hidden></div>
-      <div class="colorize" hidden></div>
-      <div class="blend" hidden></div>
     </div>
   `;
 
   const canvas = el.querySelector('canvas');
   const canvasWrap = el.querySelector('.canvas-wrap');
   const layersPanel = el.querySelector('.layers-panel');
+  const layerActions = el.querySelector('.layer-actions');
   const popover = el.querySelector('.size-popover');
   const widthCmInput = popover.querySelector('.width-cm');
   const fileInput = el.querySelector('input[type=file]');
@@ -113,7 +129,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
   const textColorInput = el.querySelector('.text-color');
   const clearBtn = el.querySelector('.clear');
   const resetBtn = el.querySelector('.reset');
-  const cropBtn = el.querySelector('.crop');
+  const duplicateBtn = el.querySelector('.duplicate');
   const recentEl = el.querySelector('.recent');
   const colorizeEl = el.querySelector('.colorize');
   const blendEl = el.querySelector('.blend');
@@ -132,7 +148,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
       y: area.y ?? 0.36,
       widthCm: defaultWidthCm(area),
       rotation: 0,
-      colorize: 'original', blendMode: 'source-over', cropMode: 'none',
+      colorize: 'original', blendMode: 'source-over',
     };
   };
   const newImageLayer = () => ({
@@ -252,7 +268,6 @@ export function createView({ label, getItem, getColor, viewKey }) {
     slot.rotation = saved.rotation ?? 0;
     slot.colorize = saved.colorize ?? 'original';
     slot.blendMode = saved.blendMode ?? 'source-over';
-    slot.cropMode = saved.cropMode ?? 'none';
   }
 
   // ---------- size popover (cm width) -----------------------------------------
@@ -267,12 +282,35 @@ export function createView({ label, getItem, getColor, viewKey }) {
     const sy = cRect.height / canvas.height;
     let x = (cRect.left - vRect.left) + h.tr.x * sx + 10;
     let y = (cRect.top - vRect.top) + h.tr.y * sy - 12;
-    // Clamp into the view bounds so the popover never falls off-screen.
     popover.hidden = false;
     const pw = popover.offsetWidth || 90;
     const ph = popover.offsetHeight || 26;
-    x = Math.max(8, Math.min(vRect.width - pw - 8, x));
-    y = Math.max(8, Math.min(vRect.height - ph - 8, y));
+    // Clamp inside the garment rect when known, else inside the view. Also
+    // step around the layer-actions rail (right) and layers panel (top-right)
+    // so the popover stays readable instead of overlapping floating chrome.
+    const g = canvas.__garmentRect;
+    let minX = 8, minY = 8;
+    let maxX = vRect.width - pw - 8;
+    let maxY = vRect.height - ph - 8;
+    if (g) {
+      minX = Math.max(minX, (cRect.left - vRect.left) + g.dx * sx);
+      minY = Math.max(minY, (cRect.top - vRect.top) + g.dy * sy);
+      maxX = Math.min(maxX, (cRect.left - vRect.left) + (g.dx + g.drawW) * sx - pw);
+      maxY = Math.min(maxY, (cRect.top - vRect.top) + (g.dy + g.drawH) * sy - ph);
+    }
+    if (layerActions && !layerActions.hidden) {
+      maxX = Math.min(maxX, vRect.width - layerActions.offsetWidth - 16 - pw);
+    }
+    if (layersPanel && !layersPanel.hidden) {
+      const layersBottom = layersPanel.offsetTop + layersPanel.offsetHeight + 8;
+      const layersLeft = layersPanel.offsetLeft - 8;
+      // Only push down if we'd otherwise sit in the layers panel's column.
+      if (x + pw > layersLeft && y < layersBottom) y = Math.max(y, layersBottom);
+    }
+    if (maxX < minX) maxX = minX;
+    if (maxY < minY) maxY = minY;
+    x = Math.max(minX, Math.min(maxX, x));
+    y = Math.max(minY, Math.min(maxY, y));
     popover.style.left = `${x}px`;
     popover.style.top = `${y}px`;
     if (document.activeElement !== widthCmInput) {
@@ -301,6 +339,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     for (const m of COLORIZE_MODES) {
       const b = document.createElement('button');
       b.textContent = m.label;
+      b.title = m.title;
       b.className = 'colorize-btn';
       b.dataset.id = m.id;
       b.addEventListener('click', () => {
@@ -348,6 +387,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     for (const m of BLEND_MODES) {
       const b = document.createElement('button');
       b.textContent = m.label;
+      b.title = m.title;
       b.className = 'colorize-btn';
       b.dataset.id = m.id;
       b.addEventListener('click', () => {
@@ -369,19 +409,6 @@ export function createView({ label, getItem, getColor, viewKey }) {
     syncBlend();
   }
 
-  function syncCrop() {
-    const a = active();
-    cropBtn.classList.toggle('active', a?.cropMode === 'circle');
-  }
-  cropBtn.addEventListener('click', () => {
-    const a = active();
-    if (!a) return;
-    a.cropMode = a.cropMode === 'circle' ? 'none' : 'circle';
-    syncCrop();
-    schedulePersist();
-    redraw();
-  });
-
   function updateControls() {
     const a = active();
     const isText = a?.kind === 'text';
@@ -390,15 +417,10 @@ export function createView({ label, getItem, getColor, viewKey }) {
     fontSelect.hidden = !isText;
     sizeSlider.hidden = !isText;
     textColorInput.hidden = !isText;
-    clearBtn.hidden = !a;
-    resetBtn.hidden = !a;
-    cropBtn.hidden = !a;
-    colorizeEl.hidden = !a;
-    blendEl.hidden = !a;
+    layerActions.hidden = !a;
     if (a) {
       buildColorize();
       buildBlend();
-      syncCrop();
       if (isText) {
         textInput.value = a.text;
         fontSelect.value = a.fontId;
@@ -457,14 +479,14 @@ export function createView({ label, getItem, getColor, viewKey }) {
         kind: 'text',
         text: l.text, fontId: l.fontId, fontSize: l.fontSize, textColor: l.textColor,
         x: l.x, y: l.y, widthCm: l.widthCm, rotation: l.rotation,
-        colorize: l.colorize, blendMode: l.blendMode, cropMode: l.cropMode,
+        colorize: l.colorize, blendMode: l.blendMode,
       };
     }
     return {
       kind: 'image',
       dataUrl: l.dataUrl, filename: l.filename,
       x: l.x, y: l.y, widthCm: l.widthCm, rotation: l.rotation,
-      colorize: l.colorize, blendMode: l.blendMode, cropMode: l.cropMode,
+      colorize: l.colorize, blendMode: l.blendMode,
     };
   }
   function persist(forItemId = currentItemId) {
@@ -530,8 +552,12 @@ export function createView({ label, getItem, getColor, viewKey }) {
     l.image = image;
     l.dataUrl = dataUrl;
     l.filename = filename;
-    if (placement) applyPlacement(l, placement);
-    else applyDesignAreaTo(l);
+    if (placement) {
+      applyPlacement(l, placement);
+    } else {
+      applyDesignAreaTo(l);
+      l.widthCm = widthCmForMaxDim(image);
+    }
     if (!placement && globalColor) l.colorize = globalColor;
     layers.push(l);
     activeIndex = layers.length - 1;
@@ -631,9 +657,7 @@ export function createView({ label, getItem, getColor, viewKey }) {
     redraw();
   });
 
-  clearBtn.addEventListener('click', () => clearActiveLayer());
-
-  resetBtn.addEventListener('click', () => {
+  function resetActiveLayer() {
     const a = active();
     if (!a) return;
     const area = currentDesignArea();
@@ -643,7 +667,29 @@ export function createView({ label, getItem, getColor, viewKey }) {
     a.rotation = 0;
     schedulePersist();
     redraw();
-  });
+  }
+
+  async function duplicateActiveLayer() {
+    const a = active();
+    if (!a) return;
+    const copy = { ...a };
+    // Slight offset so the copy is visible on top of the original.
+    copy.x = (a.x ?? 0.5) + 0.04;
+    copy.y = (a.y ?? 0.5) + 0.04;
+    if (a.kind === 'text') {
+      // Re-render so the copy owns its own canvas/dataUrl.
+      await renderTextLayer(copy);
+    }
+    layers.push(copy);
+    activeIndex = layers.length - 1;
+    persist();
+    updateControls();
+    redraw();
+  }
+
+  clearBtn.addEventListener('click', () => clearActiveLayer());
+  resetBtn.addEventListener('click', resetActiveLayer);
+  duplicateBtn.addEventListener('click', () => duplicateActiveLayer());
 
   // ---------- recent strip ----------------------------------------------------
   function renderRecent() {
@@ -865,7 +911,9 @@ export function createView({ label, getItem, getColor, viewKey }) {
       slot.y = (drag.centerY + (y - drag.startY) - baseY) / baseH;
     } else if (drag.mode === 'rotate') {
       const angle = Math.atan2(y - drag.centerY, x - drag.centerX);
-      slot.rotation = drag.startRotation + (angle - drag.startAngle);
+      const raw = drag.startRotation + (angle - drag.startAngle);
+      const step = Math.PI / 12; // 15°
+      slot.rotation = Math.round(raw / step) * step;
     } else if (drag.mode.startsWith('scale-')) {
       const vx = x - drag.clickOffsetX - drag.centerX;
       const vy = y - drag.clickOffsetY - drag.centerY;
@@ -1023,6 +1071,9 @@ export function createView({ label, getItem, getColor, viewKey }) {
     clearGlobalColor,
     undo,
     redo,
+    clear: clearAllLayers,
+    reset: resetActiveLayer,
+    duplicate: duplicateActiveLayer,
     getDesigns: () => layers.filter(l => l.image),
     getHandlesVisible: () => activeIndex >= 0,
     setHandlesVisible: (v) => {
